@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where android)",
+      "Bash(echo $ANDROID_HOME)",
+      "Bash(dir:*)",
+      "Bash(where:*)",
+      "Bash(npm install:*)",
+      "Bash(npx react-native log-android:*)",
+      "Bash(npm run lint)",
+      "Bash(npm start)",
+      "Bash(npm run android:*)",
+      "Bash(.gradlew.bat app:installDebug)",
+      "Bash(./gradlew:*)",
+      "Bash(gradlew.bat clean:*)",
+      "Bash(.gradlew.bat clean)",
+      "Bash(copy:*)",
+      "Bash(npx react-native-asset:*)",
+      "Bash(npx react-native:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
