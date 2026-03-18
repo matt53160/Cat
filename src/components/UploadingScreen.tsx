@@ -7,9 +7,9 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { colors } from '../theme/colors';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface UploadingScreenProps {
   visible: boolean;
@@ -17,18 +17,25 @@ interface UploadingScreenProps {
   step?: 'uploading' | 'analyzing' | 'saving' | 'success' | 'error';
 }
 
-export default function UploadingScreen({ 
-  visible, 
-  message = "Envoi de votre photo...", 
-  step = 'uploading' 
+const stepConfig = {
+  uploading: { emoji: '☁️', title: 'Envoi en cours' },
+  analyzing: { emoji: '🔍', title: 'Analyse en cours' },
+  saving: { emoji: '💾', title: 'Sauvegarde' },
+  success: { emoji: '✅', title: 'Terminé !' },
+  error: { emoji: '😿', title: 'Oups !' },
+};
+
+export default function UploadingScreen({
+  visible,
+  message = 'Envoi de votre photo...',
+  step = 'uploading',
 }: UploadingScreenProps) {
-  const spinValue = useRef(new Animated.Value(0)).current;
   const scaleValue = useRef(new Animated.Value(0.8)).current;
   const fadeValue = useRef(new Animated.Value(0)).current;
+  const bounceValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      // Animation d'entrée
       Animated.parallel([
         Animated.timing(fadeValue, {
           toValue: 1,
@@ -43,85 +50,57 @@ export default function UploadingScreen({
         }),
       ]).start();
 
-      // Animation de rotation continue
-      const spinAnimation = Animated.loop(
-        Animated.timing(spinValue, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        })
+      const bounceAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(bounceValue, {
+            toValue: -8,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bounceValue, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
       );
-      spinAnimation.start();
+      bounceAnimation.start();
 
-      return () => spinAnimation.stop();
+      return () => bounceAnimation.stop();
     } else {
-      // Reset des animations
       fadeValue.setValue(0);
       scaleValue.setValue(0.8);
-      spinValue.setValue(0);
+      bounceValue.setValue(0);
     }
   }, [visible]);
 
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const config = stepConfig[step];
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-    >
-      <Animated.View 
-        style={[
-          styles.overlay,
-          { opacity: fadeValue }
-        ]}
-      >
-        <Animated.View 
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+      <Animated.View style={[styles.overlay, { opacity: fadeValue }]}>
+        <Animated.View
           style={[
             styles.container,
-            { 
-              transform: [{ scale: scaleValue }],
-              opacity: fadeValue 
-            }
+            { transform: [{ scale: scaleValue }], opacity: fadeValue },
           ]}
         >
-          {/* Icône dynamique selon l'étape */}
-          <View style={styles.iconContainer}>
-            <Animated.View 
-              style={[
-                styles.spinningBorder,
-                { transform: [{ rotate: spin }] }
-              ]}
-            />
-            <View style={styles.cameraIconWrapper}>
-              {step === 'uploading' && <Icon name="cloud-upload" size={40} color="#0A84FF" />}
-              {step === 'analyzing' && <Icon name="eye" size={40} color="#0A84FF" />}
-              {step === 'saving' && <Icon name="save" size={40} color="#0A84FF" />}
-              {step === 'success' && <Icon name="checkmark-circle" size={40} color="#32D74B" />}
-              {step === 'error' && <Icon name="alert-circle" size={40} color="#FF3B30" />}
-            </View>
-          </View>
+          <Animated.View
+            style={[styles.emojiContainer, { transform: [{ translateY: bounceValue }] }]}
+          >
+            <Text style={styles.emoji}>{config.emoji}</Text>
+          </Animated.View>
 
-          {/* Messages dynamiques */}
-          <Text style={styles.title}>
-            {step === 'uploading' && 'Envoi en cours'}
-            {step === 'analyzing' && 'Analyse en cours'}
-            {step === 'saving' && 'Sauvegarde'}
-            {step === 'success' && 'Terminé !'}
-            {step === 'error' && 'Erreur'}
-          </Text>
+          <Text style={styles.title}>{config.title}</Text>
           <Text style={styles.message}>{message}</Text>
-          
-          {/* Points animés */}
-          <View style={styles.dotsContainer}>
-            <AnimatedDot delay={0} />
-            <AnimatedDot delay={200} />
-            <AnimatedDot delay={400} />
-          </View>
+
+          {step !== 'success' && step !== 'error' && (
+            <View style={styles.dotsContainer}>
+              <AnimatedDot delay={0} />
+              <AnimatedDot delay={200} />
+              <AnimatedDot delay={400} />
+            </View>
+          )}
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -129,19 +108,19 @@ export default function UploadingScreen({
 }
 
 function AnimatedDot({ delay }: { delay: number }) {
-  const scaleValue = useRef(new Animated.Value(0.5)).current;
+  const scaleValue = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(scaleValue, {
           toValue: 1,
-          duration: 600,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.timing(scaleValue, {
-          toValue: 0.5,
-          duration: 600,
+          toValue: 0.4,
+          duration: 500,
           useNativeDriver: true,
         }),
       ])
@@ -158,11 +137,8 @@ function AnimatedDot({ delay }: { delay: number }) {
   }, []);
 
   return (
-    <Animated.View 
-      style={[
-        styles.dot,
-        { transform: [{ scale: scaleValue }] }
-      ]} 
+    <Animated.View
+      style={[styles.dot, { transform: [{ scale: scaleValue }] }]}
     />
   );
 }
@@ -170,62 +146,52 @@ function AnimatedDot({ delay }: { delay: number }) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: colors.bgOverlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   container: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 20,
-    padding: 40,
+    backgroundColor: colors.bgCard,
+    borderRadius: 24,
+    padding: 36,
     alignItems: 'center',
     width: width * 0.8,
     maxWidth: 300,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  iconContainer: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  spinningBorder: {
-    position: 'absolute',
+  emojiContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    borderWidth: 3,
-    borderTopColor: '#0A84FF',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: 'transparent',
-  },
-  cameraIconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+    backgroundColor: colors.bgCardAlt,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: colors.goldLight,
+  },
+  emoji: {
+    fontSize: 36,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 6,
     textAlign: 'center',
   },
   message: {
-    fontSize: 16,
-    color: '#8E8E93',
+    fontSize: 14,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   dotsContainer: {
     flexDirection: 'row',
@@ -235,6 +201,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#0A84FF',
+    backgroundColor: colors.gold,
   },
 });

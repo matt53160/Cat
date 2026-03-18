@@ -20,8 +20,8 @@ import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
 import UploadingScreen from '../components/UploadingScreen';
 import { aiAnalysisService } from '../services/aiAnalysisService';
 import { photoMetadataService } from '../services/photoMetadataService';
+import { colors } from '../theme/colors';
 
-// Limites de validation des fichiers
 const MAX_FILE_SIZE_MB = 10;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif'];
 
@@ -45,12 +45,10 @@ export default function CameraScreen({ navigation }: any) {
       const response = await fetch(imageUri);
       const blob = await response.blob();
 
-      // Vérifier la taille
       if (blob.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
         return { valid: false, error: `La photo dépasse la taille maximale de ${MAX_FILE_SIZE_MB} Mo` };
       }
 
-      // Vérifier le type MIME
       if (blob.type && !ALLOWED_MIME_TYPES.includes(blob.type)) {
         return { valid: false, error: 'Format de fichier non supporté. Utilisez JPEG, PNG ou HEIC.' };
       }
@@ -63,19 +61,16 @@ export default function CameraScreen({ navigation }: any) {
 
   const uploadImageToSupabase = async (imageUri: string, fileName: string) => {
     try {
-      // Récupérer l'utilisateur connecté
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         return { message: 'Utilisateur non connecté' };
       }
 
-      // Valider le fichier avant upload
       const validation = await validateFile(imageUri);
       if (!validation.valid) {
         return { message: validation.error };
       }
 
-      // Créer le FormData
       const formData = new FormData();
       formData.append('file', {
         uri: imageUri,
@@ -83,11 +78,9 @@ export default function CameraScreen({ navigation }: any) {
         name: fileName,
       } as any);
 
-      // Créer le chemin avec l'email de l'utilisateur
       const userFolder = user.email || user.id;
       const filePath = `user-photos/${userFolder}/${fileName}`;
 
-      // Récupérer le token de session pour l'authentification
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
 
@@ -95,7 +88,6 @@ export default function CameraScreen({ navigation }: any) {
         return { message: 'Session expirée, veuillez vous reconnecter' };
       }
 
-      // Upload via l'API Supabase Storage avec le token de session
       const response = await fetch(
         `${SUPABASE_URL}/storage/v1/object/photos/${filePath}`,
         {
@@ -112,7 +104,6 @@ export default function CameraScreen({ navigation }: any) {
         return { message: 'Erreur lors de l\'envoi de la photo' };
       }
 
-      // Générer l'URL publique
       const { data: urlData } = supabase.storage
         .from('photos')
         .getPublicUrl(filePath);
@@ -129,7 +120,6 @@ export default function CameraScreen({ navigation }: any) {
     try {
       setIsProcessing(true);
 
-      // Vérifier la configuration de l'API
       if (!aiAnalysisService.isConfigured()) {
         Alert.alert(
           'Configuration manquante',
@@ -137,7 +127,6 @@ export default function CameraScreen({ navigation }: any) {
           [{ text: 'OK' }]
         );
 
-        // Sauvegarder sans analyse IA
         setProcessingStep('uploading');
         setProcessingMessage('Sauvegarde sans analyse IA...');
 
@@ -156,7 +145,6 @@ export default function CameraScreen({ navigation }: any) {
         return;
       }
 
-      // Étape 1: Upload de l'image
       setProcessingStep('uploading');
       setProcessingMessage('Envoi de votre photo...');
 
@@ -165,7 +153,6 @@ export default function CameraScreen({ navigation }: any) {
         throw new Error(uploadResult.message);
       }
 
-      // Étape 2: Analyse IA
       setProcessingStep('analyzing');
       setProcessingMessage('Analyse de l\'animal avec l\'IA...');
 
@@ -175,7 +162,6 @@ export default function CameraScreen({ navigation }: any) {
         throw new Error(aiResult.error || 'Erreur d\'analyse IA');
       }
 
-      // Étape 3: Sauvegarde des métadonnées
       setProcessingStep('saving');
       setProcessingMessage('Sauvegarde des informations...');
 
@@ -187,7 +173,6 @@ export default function CameraScreen({ navigation }: any) {
         processingTime
       );
 
-      // Étape 4: Succès
       setProcessingStep('success');
 
       if (!aiResult.hasAnimal) {
@@ -209,8 +194,8 @@ export default function CameraScreen({ navigation }: any) {
         setTimeout(() => {
           setIsProcessing(false);
           Alert.alert(
-            'Animal détecté !',
-            `Type: ${animalInfo.animal_type}\nCouleur: ${animalInfo.primary_color}\nMotif: ${animalInfo.coat_pattern || 'Non défini'}${animalInfo.breed != "null" ? `\nRace: ${animalInfo.breed }` :  `\nRace: Incertain`}`,
+            'Animal détecté ! 🎉',
+            `Type: ${animalInfo.animal_type}\nCouleur: ${animalInfo.primary_color}\nMotif: ${animalInfo.coat_pattern || 'Non défini'}${animalInfo.breed != "null" ? `\nRace: ${animalInfo.breed}` : `\nRace: Incertain`}`,
             [
               { text: 'Voir la galerie', onPress: () => navigation.navigate('Gallery') },
               { text: 'OK' }
@@ -225,7 +210,7 @@ export default function CameraScreen({ navigation }: any) {
 
       setTimeout(() => {
         setIsProcessing(false);
-        Alert.alert('Erreur', 'Une erreur est survenue lors du traitement de la photo.');
+        Alert.alert('Oups !', 'Une erreur est survenue lors du traitement de la photo.');
       }, 2000);
     }
   };
@@ -246,7 +231,7 @@ export default function CameraScreen({ navigation }: any) {
       } catch (error) {
         setIsCapturing(false);
         setIsProcessing(false);
-        Alert.alert('Erreur', 'Impossible de prendre la photo');
+        Alert.alert('Oups !', 'Impossible de prendre la photo');
       }
     }
   };
@@ -270,7 +255,7 @@ export default function CameraScreen({ navigation }: any) {
 
       return status === PermissionsAndroid.RESULTS.GRANTED;
     }
-    return true; // iOS gère les permissions automatiquement
+    return true;
   };
 
   const pickImage = async () => {
@@ -298,7 +283,7 @@ export default function CameraScreen({ navigation }: any) {
     launchImageLibrary(options, async (response: ImagePickerResponse) => {
       if (response.didCancel || response.errorMessage) {
         if (response.errorMessage) {
-          Alert.alert('Erreur', 'Impossible de sélectionner la photo');
+          Alert.alert('Oups !', 'Impossible de sélectionner la photo');
         }
         return;
       }
@@ -310,55 +295,36 @@ export default function CameraScreen({ navigation }: any) {
             const fileName = `imported_${Date.now()}.jpg`;
             await processPhotoWithAI(asset.uri, fileName);
           } catch (error) {
-            Alert.alert('Erreur', 'Impossible d\'importer la photo');
+            Alert.alert('Oups !', 'Impossible d\'importer la photo');
           }
         }
       }
     });
   };
 
-  if (!hasPermission) {
+  // No permission or no device view
+  if (!hasPermission || !device) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <Icon name="camera-outline" size={80} color="#8E8E93" />
-        <Text style={styles.permissionText}>Autorisation de la caméra requise</Text>
-        <Text style={styles.permissionSubtext}>
-          Vous pouvez importer des photos depuis votre galerie
-        </Text>
-        <TouchableOpacity
-          style={styles.importButton}
-          onPress={pickImage}
-          disabled={isCapturing || isProcessing}
-        >
-          <Icon name="images-outline" size={24} color="white" />
-          <Text style={styles.importButtonText}>Importer une photo</Text>
-        </TouchableOpacity>
-
-        <UploadingScreen
-          visible={isProcessing}
-          message={processingMessage}
-          step={processingStep}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  if (!device) {
-    return (
-      <SafeAreaView style={styles.centerContainer}>
-        <Icon name="camera-off-outline" size={80} color="#8E8E93" />
-        <Text style={styles.permissionText}>Aucune caméra disponible</Text>
-        <Text style={styles.permissionSubtext}>
-          Vous pouvez importer des photos depuis votre galerie
-        </Text>
-        <TouchableOpacity
-          style={styles.importButton}
-          onPress={pickImage}
-          disabled={isCapturing || isProcessing}
-        >
-          <Icon name="images-outline" size={24} color="white" />
-          <Text style={styles.importButtonText}>Importer une photo</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.fallbackContainer}>
+        <View style={styles.fallbackContent}>
+          <View style={styles.fallbackIcon}>
+            <Text style={styles.fallbackEmoji}>{!hasPermission ? '📷' : '🔍'}</Text>
+          </View>
+          <Text style={styles.fallbackTitle}>
+            {!hasPermission ? 'Autorisation requise' : 'Aucune caméra disponible'}
+          </Text>
+          <Text style={styles.fallbackSubtext}>
+            Vous pouvez importer des photos depuis votre galerie
+          </Text>
+          <TouchableOpacity
+            style={styles.importButtonLarge}
+            onPress={pickImage}
+            disabled={isCapturing || isProcessing}
+          >
+            <Text style={styles.importEmoji}>🖼️</Text>
+            <Text style={styles.importButtonText}>Importer une photo</Text>
+          </TouchableOpacity>
+        </View>
 
         <UploadingScreen
           visible={isProcessing}
@@ -378,23 +344,29 @@ export default function CameraScreen({ navigation }: any) {
         isActive={true}
         photo={true}
       />
-      <View style={styles.topButtonContainer}>
+
+      {/* Top bar */}
+      <View style={styles.topBar}>
         <TouchableOpacity
-          style={styles.importButtonSmall}
+          style={styles.topButton}
           onPress={pickImage}
           disabled={isCapturing}
         >
-          <Icon name="images-outline" size={24} color="white" />
+          <Icon name="images-outline" size={22} color="white" />
         </TouchableOpacity>
       </View>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.captureButton}
-          onPress={takePhoto}
-          disabled={isCapturing || isProcessing}
-        >
-          <View style={styles.captureButtonInner} />
-        </TouchableOpacity>
+
+      {/* Bottom bar */}
+      <View style={styles.bottomBar}>
+        <View style={styles.captureWrapper}>
+          <TouchableOpacity
+            style={styles.captureButton}
+            onPress={takePhoto}
+            disabled={isCapturing || isProcessing}
+          >
+            <View style={styles.captureButtonInner} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <UploadingScreen
@@ -411,74 +383,102 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'black',
   },
-  centerContainer: {
+  fallbackContainer: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  fallbackContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
-    padding: 20,
+    padding: 24,
   },
-  permissionText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  permissionSubtext: {
-    fontSize: 14,
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 50,
-    width: '100%',
+  fallbackIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.goldLight,
+    justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 20,
   },
-  topButtonContainer: {
+  fallbackEmoji: {
+    fontSize: 44,
+  },
+  fallbackTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  fallbackSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 28,
+  },
+  importButtonLarge: {
+    backgroundColor: colors.gold,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: colors.goldDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  importEmoji: {
+    fontSize: 20,
+  },
+  importButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  topBar: {
     position: 'absolute',
     top: 60,
     right: 20,
     zIndex: 1,
   },
+  topButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 12,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 50,
+    width: '100%',
+    alignItems: 'center',
+  },
+  captureWrapper: {
+    padding: 4,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+  },
   captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
   },
   captureButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'white',
     borderWidth: 2,
-    borderColor: 'black',
-  },
-  importButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  importButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  importButtonSmall: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    padding: 12,
-    borderRadius: 25,
-    borderWidth: 2,
-    borderColor: 'white',
+    borderColor: 'rgba(0, 0, 0, 0.15)',
   },
 });

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { PhotoMetadata } from '../services/photoMetadataService';
 import { formatColors, formatBreedWithConfidence } from '../services/aiAnalysisService';
+import { colors } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -23,186 +24,140 @@ interface PhotoDetailModalProps {
   onClose: () => void;
 }
 
+const infoItems = [
+  { key: 'animal_type', label: 'Animal', emoji: '🐾', colorBg: colors.greenLight },
+  { key: 'breed', label: 'Race', emoji: '🏅', colorBg: colors.bgCardAlt },
+  { key: 'primary_color', label: 'Couleurs', emoji: '🎨', colorBg: colors.purpleLight },
+  { key: 'coat_pattern', label: 'Motif', emoji: '✨', colorBg: colors.pinkLight },
+  { key: 'eye_color', label: 'Yeux', emoji: '👁️', colorBg: colors.blueLight },
+  { key: 'size_category', label: 'Taille', emoji: '📏', colorBg: colors.bgCardAlt },
+  { key: 'age_estimate', label: 'Âge', emoji: '🎂', colorBg: colors.greenLight },
+];
+
 export default function PhotoDetailModal({ visible, photo, onClose }: PhotoDetailModalProps) {
   if (!photo) return null;
 
   const hasAnimalData = photo.animal_type;
 
+  const getValue = (key: string) => {
+    switch (key) {
+      case 'animal_type':
+        return photo.animal_type || 'Incertain';
+      case 'breed':
+        return formatBreedWithConfidence(photo.breed || 'Incertain', photo.breed_confidence || 0);
+      case 'primary_color':
+        return formatColors(photo.primary_color || 'Incertain', photo.secondary_colors || []);
+      case 'coat_pattern':
+        return photo.coat_pattern || 'Incertain';
+      case 'eye_color':
+        return photo.eye_color || 'Incertain';
+      case 'size_category':
+        return photo.size_category || 'Incertain';
+      case 'age_estimate':
+        return photo.age_estimate || 'Incertain';
+      default:
+        return '';
+    }
+  };
+
+  const shouldShow = (key: string) => {
+    const val = (photo as any)[key];
+    return val && val !== 'null' && val !== 'Incertain';
+  };
+
+  const getAnimalEmoji = (type?: string) => {
+    if (!type) return '🐾';
+    const emojis: { [key: string]: string } = {
+      chat: '🐱', chien: '🐶', oiseau: '🐦', lapin: '🐰',
+      hamster: '🐹', poisson: '🐟', tortue: '🐢',
+    };
+    return emojis[type.toLowerCase()] || '🐾';
+  };
+
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <StatusBar backgroundColor="rgba(0,0,0,0.9)" barStyle="light-content" />
+    <Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <StatusBar backgroundColor={colors.bg} barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
-        {/* Header avec bouton fermer */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Icon name="close" size={28} color="#FFFFFF" />
+            <Icon name="close" size={22} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {hasAnimalData ? (photo.animal_type || 'Incertain') : 'Photo'}
+            {hasAnimalData ? `${getAnimalEmoji(photo.animal_type)} ${photo.animal_type}` : 'Photo'}
           </Text>
           <View style={styles.placeholder} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Image principale */}
-          <View style={styles.imageContainer}>
-            <Image source={{ uri: photo.photo_url }} style={styles.mainImage} resizeMode="contain" />
+          {/* Image */}
+          <View style={styles.imageCard}>
+            <Image source={{ uri: photo.photo_url }} style={styles.mainImage} resizeMode="cover" />
           </View>
 
-          {/* Informations sur l'animal */}
           {hasAnimalData ? (
-            <View style={styles.animalInfoContainer}>
-              <View style={styles.animalHeader}>
-                <Icon name="paw" size={24} color="#0A84FF" />
-                <Text style={styles.animalTitle}>Informations détectées par IA</Text>
+            <>
+              {/* Animal info cards */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionEmoji}>🔍</Text>
+                <Text style={styles.sectionTitle}>Informations détectées</Text>
               </View>
 
               <View style={styles.infoGrid}>
-                {/* Type d'animal */}
-                <View style={styles.infoItem}>
-                  <Icon name="heart" size={20} color="#32D74B" />
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Animal</Text>
-                    <Text style={styles.infoValue}>{photo.animal_type || 'Incertain'}</Text>
-                  </View>
-                </View>
-
-                {/* Race */}
-                {photo.breed && (
-                  <View style={styles.infoItem}>
-                    <Icon name="ribbon" size={20} color="#FF9F0A" />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Race</Text>
-                      <Text style={styles.infoValue}>
-                        {formatBreedWithConfidence(photo.breed || 'Incertain', photo.breed_confidence || 0)}
-                      </Text>
-                      {photo.breed_confidence && (
+                {infoItems
+                  .filter(item => item.key === 'animal_type' || shouldShow(item.key))
+                  .map((item) => (
+                    <View key={item.key} style={[styles.infoCard, { backgroundColor: item.colorBg }]}>
+                      <Text style={styles.infoEmoji}>{item.emoji}</Text>
+                      <Text style={styles.infoLabel}>{item.label}</Text>
+                      <Text style={styles.infoValue}>{getValue(item.key)}</Text>
+                      {item.key === 'breed' && photo.breed_confidence ? (
                         <Text style={styles.confidenceText}>
-                          Confiance: {Math.round(photo.breed_confidence * 100)}%
+                          {Math.round(photo.breed_confidence * 100)}% confiance
                         </Text>
-                      )}
+                      ) : null}
                     </View>
-                  </View>
-                )}
-
-                {/* Couleurs */}
-                {photo.primary_color && (
-                  <View style={styles.infoItem}>
-                    <Icon name="color-palette" size={20} color="#AF52DE" />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Couleurs</Text>
-                      <Text style={styles.infoValue}>
-                        {formatColors(photo.primary_color || 'Incertain', photo.secondary_colors || [])}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Motif du pelage */}
-                {photo.coat_pattern && (
-                  <View style={styles.infoItem}>
-                    <Icon name="diamond" size={20} color="#FF375F" />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Motif</Text>
-                      <Text style={styles.infoValue}>{photo.coat_pattern || 'Incertain'}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Couleur des yeux */}
-                {photo.eye_color && (
-                  <View style={styles.infoItem}>
-                    <Icon name="eye" size={20} color="#5AC8FA" />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Yeux</Text>
-                      <Text style={styles.infoValue}>{photo.eye_color || 'Incertain'}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Taille */}
-                {photo.size_category && (
-                  <View style={styles.infoItem}>
-                    <Icon name="resize" size={20} color="#FFCC02" />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Taille</Text>
-                      <Text style={styles.infoValue}>{photo.size_category || 'Incertain'}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Âge estimé */}
-                {photo.age_estimate && (
-                  <View style={styles.infoItem}>
-                    <Icon name="time" size={20} color="#34C759" />
-                    <View style={styles.infoContent}>
-                      <Text style={styles.infoLabel}>Âge</Text>
-                      <Text style={styles.infoValue}>{photo.age_estimate || 'Incertain'}</Text>
-                    </View>
-                  </View>
-                )}
+                  ))}
               </View>
 
-              {/* Métadonnées techniques */}
-              <View style={styles.technicalInfo}>
-                <Text style={styles.technicalTitle}>Informations techniques</Text>
-                <View style={styles.technicalGrid}>
-                  <View style={styles.technicalItem}>
-                    <Text style={styles.technicalLabel}>Analysé par</Text>
-                    <Text style={styles.technicalValue}>
-                      {photo.ai_provider === 'openai' ? 'OpenAI GPT-4o mini' : photo.ai_provider}
-                    </Text>
-                  </View>
-                  {photo.ai_processing_time_ms && (
-                    <View style={styles.technicalItem}>
-                      <Text style={styles.technicalLabel}>Temps d'analyse</Text>
-                      <Text style={styles.technicalValue}>
-                        {(photo.ai_processing_time_ms / 1000).toFixed(1)}s
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.technicalItem}>
-                    <Text style={styles.technicalLabel}>Date</Text>
-                    <Text style={styles.technicalValue}>
-                      {new Date(photo.created_at || '').toLocaleDateString('fr-FR', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </Text>
-                  </View>
+              {/* Technical info */}
+              <View style={styles.techCard}>
+                <Text style={styles.techTitle}>Infos techniques</Text>
+                <View style={styles.techRow}>
+                  <Text style={styles.techLabel}>Analysé par</Text>
+                  <Text style={styles.techValue}>
+                    {photo.ai_provider === 'openai' ? 'GPT-4o mini' : photo.ai_provider}
+                  </Text>
                 </View>
-              </View>
-            </View>
-          ) : (
-            /* Pas d'animal détecté */
-            <View style={styles.noAnimalContainer}>
-              <Icon name="search" size={48} color="#8E8E93" />
-              <Text style={styles.noAnimalTitle}>Aucun animal détecté</Text>
-              <Text style={styles.noAnimalSubtitle}>
-                Cette photo a été sauvegardée mais aucun animal n'a été identifié par l'IA.
-              </Text>
-              <View style={styles.technicalInfo}>
-                <View style={styles.technicalItem}>
-                  <Text style={styles.technicalLabel}>Date</Text>
-                  <Text style={styles.technicalValue}>
+                {photo.ai_processing_time_ms ? (
+                  <View style={styles.techRow}>
+                    <Text style={styles.techLabel}>Temps d'analyse</Text>
+                    <Text style={styles.techValue}>
+                      {(photo.ai_processing_time_ms / 1000).toFixed(1)}s
+                    </Text>
+                  </View>
+                ) : null}
+                <View style={styles.techRow}>
+                  <Text style={styles.techLabel}>Date</Text>
+                  <Text style={styles.techValue}>
                     {new Date(photo.created_at || '').toLocaleDateString('fr-FR', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
                     })}
                   </Text>
                 </View>
               </View>
+            </>
+          ) : (
+            <View style={styles.noAnimalCard}>
+              <Text style={styles.noAnimalEmoji}>🔍</Text>
+              <Text style={styles.noAnimalTitle}>Aucun animal détecté</Text>
+              <Text style={styles.noAnimalSubtext}>
+                Cette photo a été sauvegardée mais aucun animal n'a été identifié.
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -214,133 +169,159 @@ export default function PhotoDetailModal({ visible, photo, onClose }: PhotoDetai
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: colors.border,
   },
   closeButton: {
-    padding: 5,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.bgCard,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
     textTransform: 'capitalize',
   },
   placeholder: {
-    width: 38, // Même largeur que le bouton close pour centrer le titre
+    width: 36,
   },
   scrollContent: {
+    padding: 16,
     paddingBottom: 30,
   },
-  imageContainer: {
-    width: '100%',
-    height: height * 0.4,
-    justifyContent: 'center',
-    alignItems: 'center',
+  imageCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
     marginBottom: 20,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   mainImage: {
-    width: width - 40,
-    height: '100%',
-    borderRadius: 12,
+    width: '100%',
+    height: height * 0.38,
+    borderRadius: 20,
   },
-  animalInfoContainer: {
-    marginHorizontal: 20,
-  },
-  animalHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 14,
+    gap: 8,
   },
-  animalTitle: {
+  sectionEmoji: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginLeft: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
   },
   infoGrid: {
-    gap: 15,
-  },
-  infoItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 15,
-    borderRadius: 12,
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
   },
-  infoContent: {
-    flex: 1,
-    marginLeft: 15,
+  infoCard: {
+    width: (width - 52) / 2,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  infoEmoji: {
+    fontSize: 22,
+    marginBottom: 6,
   },
   infoLabel: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginBottom: 3,
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 2,
   },
   infoValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
     textTransform: 'capitalize',
   },
   confidenceText: {
-    fontSize: 12,
-    color: '#8E8E93',
+    fontSize: 11,
+    color: colors.textSecondary,
     marginTop: 2,
   },
-  technicalInfo: {
-    marginTop: 30,
-    padding: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 12,
+  techCard: {
+    backgroundColor: colors.bgCard,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  technicalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 15,
+  techTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 12,
   },
-  technicalGrid: {
-    gap: 10,
-  },
-  technicalItem: {
+  techRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 6,
   },
-  technicalLabel: {
-    fontSize: 14,
-    color: '#8E8E93',
+  techLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
   },
-  technicalValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '500',
+  techValue: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '600',
   },
-  noAnimalContainer: {
+  noAnimalCard: {
     alignItems: 'center',
-    padding: 40,
+    backgroundColor: colors.bgCard,
+    borderRadius: 20,
+    padding: 36,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  noAnimalEmoji: {
+    fontSize: 44,
+    marginBottom: 12,
   },
   noAnimalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginTop: 20,
-    marginBottom: 10,
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 8,
   },
-  noAnimalSubtitle: {
-    fontSize: 16,
-    color: '#8E8E93',
+  noAnimalSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 30,
+    lineHeight: 20,
   },
 });

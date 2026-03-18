@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Session } from '@supabase/supabase-js';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { supabase } from './src/lib/supabase';
+import { colors } from './src/theme/colors';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -14,6 +16,18 @@ import GalleryScreen from './src/screens/GalleryScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+const CatspotTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: colors.bg,
+    card: colors.bgCard,
+    text: colors.text,
+    border: colors.border,
+    primary: colors.gold,
+  },
+};
 
 function TabNavigator() {
   return (
@@ -32,27 +46,34 @@ function TabNavigator() {
 
           return <Icon name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#0A84FF',
-        tabBarInactiveTintColor: '#8E8E93',
+        tabBarActiveTintColor: colors.gold,
+        tabBarInactiveTintColor: colors.textLight,
         tabBarStyle: {
-          backgroundColor: '#1C1C1E',
-          borderTopColor: '#38383A',
+          backgroundColor: colors.bgCard,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          paddingTop: 4,
+          height: 56,
+        },
+        tabBarLabelStyle: {
+          fontWeight: '600',
+          fontSize: 11,
         },
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{ title: 'Accueil' }}
       />
-      <Tab.Screen 
-        name="Camera" 
+      <Tab.Screen
+        name="Camera"
         component={CameraScreen}
         options={{ title: 'Caméra' }}
       />
-      <Tab.Screen 
-        name="Gallery" 
+      <Tab.Screen
+        name="Gallery"
         component={GalleryScreen}
         options={{ title: 'Galerie' }}
       />
@@ -77,25 +98,28 @@ function App(): React.JSX.Element {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer theme={DarkTheme}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <NavigationContainer theme={CatspotTheme}>
         <Stack.Navigator>
           {session && session.user ? (
-            <Stack.Screen 
-              name="MainTabs" 
+            <Stack.Screen
+              name="MainTabs"
               component={TabNavigator}
               options={{ headerShown: false }}
             />
           ) : (
-            <Stack.Screen
-              name="Login"
-              component={LoginScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Register"
-              component={RegisterScreen}
-              options={{ headerShown: false }}
-            />
+            <>
+              <Stack.Screen
+                name="Login"
+                component={LoginScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Register"
+                component={RegisterScreen}
+                options={{ headerShown: false }}
+              />
+            </>
           )}
         </Stack.Navigator>
       </NavigationContainer>
