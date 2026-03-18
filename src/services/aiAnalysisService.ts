@@ -17,11 +17,9 @@ export interface AnimalAnalysisResult {
     characteristics: string[];
   };
   error?: string;
-  raw_response?: any;
 }
 
 class AIAnalysisService {
-  private readonly API_KEY = OPENAI_CONFIG.API_KEY;
   private readonly API_URL = `${OPENAI_CONFIG.BASE_URL}/chat/completions`;
 
   // Prompt système optimisé pour GPT-4o mini
@@ -65,18 +63,18 @@ IMPORTANT : Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.`;
     try {
       const response = await fetch(imagePath);
       const blob = await response.blob();
-      
+
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
-          const base64 = (reader.result as string).split(',')[1]; // Enlever le préfixe data:image/...
+          const base64 = (reader.result as string).split(',')[1];
           resolve(base64);
         };
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
-    } catch (error) {
-      throw new Error(`Erreur lors de la conversion de l'image: ${error.message}`);
+    } catch {
+      throw new Error('Impossible de lire l\'image');
     }
   }
 
@@ -84,14 +82,10 @@ IMPORTANT : Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.`;
    * Analyse une image avec GPT-4o mini
    */
   async analyzeImage(imagePath: string): Promise<AnimalAnalysisResult> {
-    const startTime = Date.now();
-    
     try {
-      console.log('🔍 Début de l\'analyse IA de l\'image...');
-      
       // Convertir l'image en base64
       const base64Image = await this.imageToBase64(imagePath);
-      
+
       // Préparer la requête pour GPT-4o mini
       const payload = {
         model: OPENAI_CONFIG.MODEL,
@@ -111,60 +105,49 @@ IMPORTANT : Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.`;
                 type: 'image_url',
                 image_url: {
                   url: `data:image/jpeg;base64,${base64Image}`,
-                  detail: 'high' // Pour une analyse détaillée
+                  detail: 'high'
                 }
               }
             ]
           }
         ],
         max_tokens: 500,
-        temperature: 0.1, // Faible température pour plus de précision
+        temperature: 0.1,
       };
 
-      console.log('📡 Envoi de la requête à OpenAI...');
-      
       // Appeler l'API OpenAI
       const response = await fetch(this.API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.API_KEY}`,
+          'Authorization': `Bearer ${OPENAI_CONFIG.API_KEY}`,
         },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`API OpenAI error ${response.status}: ${errorData}`);
+        throw new Error('Erreur de communication avec le service d\'analyse');
       }
 
       const result = await response.json();
       const aiResponse = result.choices[0]?.message?.content;
 
       if (!aiResponse) {
-        throw new Error('Aucune réponse de l\'IA');
+        throw new Error('Aucune réponse du service d\'analyse');
       }
-
-      console.log('🤖 Réponse brute de l\'IA:', aiResponse);
 
       // Parser la réponse JSON
       let parsedData;
       try {
-        // Nettoyer la réponse (enlever les éventuels backticks ou texte parasite)
         const cleanedResponse = aiResponse.replace(/```json\n?|\n?```/g, '').trim();
         parsedData = JSON.parse(cleanedResponse);
-      } catch (parseError) {
-        console.error('❌ Erreur de parsing JSON:', parseError);
+      } catch {
         return {
           success: false,
           hasAnimal: false,
           error: 'Réponse IA invalide (format JSON incorrect)',
-          raw_response: aiResponse
         };
       }
-
-      const processingTime = Date.now() - startTime;
-      console.log(`✅ Analyse terminée en ${processingTime}ms`);
 
       // Valider la structure de la réponse
       if (typeof parsedData.hasAnimal !== 'boolean') {
@@ -172,7 +155,6 @@ IMPORTANT : Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.`;
           success: false,
           hasAnimal: false,
           error: 'Structure de réponse IA invalide',
-          raw_response: parsedData
         };
       }
 
@@ -181,7 +163,6 @@ IMPORTANT : Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.`;
         return {
           success: true,
           hasAnimal: false,
-          raw_response: parsedData
         };
       }
 
@@ -201,16 +182,13 @@ IMPORTANT : Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.`;
           age_estimate: parsedData.age_estimate,
           characteristics: parsedData.characteristics || []
         },
-        raw_response: parsedData
       };
 
     } catch (error) {
-      console.error('❌ Erreur lors de l\'analyse IA:', error);
       return {
         success: false,
         hasAnimal: false,
-        error: error.message || 'Erreur inconnue lors de l\'analyse',
-        raw_response: null
+        error: error instanceof Error ? error.message : 'Erreur inconnue lors de l\'analyse',
       };
     }
   }
@@ -230,7 +208,7 @@ IMPORTANT : Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.`;
       const response = await fetch('https://api.openai.com/v1/models', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${this.API_KEY}`,
+          'Authorization': `Bearer ${OPENAI_CONFIG.API_KEY}`,
         },
       });
       return response.ok;

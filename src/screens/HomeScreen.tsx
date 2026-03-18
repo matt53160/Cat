@@ -56,8 +56,8 @@ export default function HomeScreen({ navigation }: any) {
             ]
           );
         }
-      } catch (err) {
-        console.warn('Erreur lors de la demande de permissions:', err);
+      } catch {
+        // Erreur de permissions silencieuse
       }
     }
   };
@@ -83,14 +83,14 @@ export default function HomeScreen({ navigation }: any) {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) Alert.alert('Erreur', error.message);
+    if (error) Alert.alert('Erreur', 'Impossible de se déconnecter');
     else closeOffcanvas();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Bienvenue dans PhotoApp</Text>
+        <Text style={styles.title}>Bienvenue dans Catspot</Text>
         <TouchableOpacity onPress={openOffcanvas} style={styles.profileButton}>
           <Icon name="person-circle-outline" size={32} color="#FFFFFF" />
         </TouchableOpacity>

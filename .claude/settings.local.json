@@ -16,7 +16,10 @@
       "Bash(.gradlew.bat clean)",
       "Bash(copy:*)",
       "Bash(npx react-native-asset:*)",
-      "Bash(npx react-native:*)"
+      "Bash(npx react-native:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(pg_restore --version)"
     ],
     "deny": [],
     "ask": []

@@ -37,19 +37,15 @@ export default function GalleryScreen() {
 
   const fetchPhotos = useCallback(async () => {
     try {
-      console.log('Récupération des photos...');
-      
       // Récupérer l'utilisateur connecté
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.log('Utilisateur non connecté');
         setPhotos([]);
         return;
       }
 
       const userFolder = user.email || user.id;
       const userPath = `user-photos/${userFolder}`;
-      console.log('Récupération des photos pour:', userFolder);
       
       const { data, error } = await supabase.storage
         .from('photos')
@@ -60,12 +56,9 @@ export default function GalleryScreen() {
         });
 
       if (error) {
-        console.error('Erreur lors de la récupération:', error);
-        Alert.alert('Erreur', `Impossible de récupérer les photos: ${error.message}`);
+        Alert.alert('Erreur', 'Impossible de récupérer les photos');
         return;
       }
-
-      console.log('Photos trouvées:', data?.length || 0);
 
       if (!data || data.length === 0) {
         setPhotos([]);
@@ -94,11 +87,8 @@ export default function GalleryScreen() {
 
       // Filtrer pour ne garder que les photos avec des métadonnées (photos analysées)
       const filteredPhotos = photosWithUrls.filter(photo => photo.hasMetadata);
-
-      console.log('URLs générées pour', photosWithUrls.length, 'photos, filtrées:', filteredPhotos.length);
       setPhotos(filteredPhotos);
-    } catch (error) {
-      console.error('Erreur inattendue:', error);
+    } catch {
       Alert.alert('Erreur', 'Une erreur est survenue lors de la récupération des photos');
     } finally {
       setLoading(false);
@@ -113,7 +103,6 @@ export default function GalleryScreen() {
   // Recharger les photos à chaque fois qu'on arrive sur l'onglet
   useFocusEffect(
     useCallback(() => {
-      console.log('Focus sur l\'onglet galerie - rechargement des photos');
       fetchPhotos();
     }, [fetchPhotos])
   );
@@ -134,8 +123,6 @@ export default function GalleryScreen() {
     if(item.name == ".emptyFolderPlaceholder"){
       return null;
     }
-    console.log('Affichage photo:', item.name, 'URL:', item.url);
-    
     return (
       <TouchableOpacity 
         style={styles.photoContainer}
@@ -145,11 +132,8 @@ export default function GalleryScreen() {
         <Image 
           source={{ uri: item.url }} 
           style={styles.photo}
-          onError={(error) => {
-            console.error('Erreur chargement image:', item.name, error.nativeEvent.error);
-          }}
-          onLoad={() => {
-            console.log('Image chargée avec succès:', item.name);
+          onError={() => {
+            // Erreur silencieuse de chargement d'image
           }}
         />
         <Text style={styles.photoDate}>

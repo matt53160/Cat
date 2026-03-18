@@ -1,9 +1,18 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import Config from 'react-native-config';
 
-const supabaseUrl = 'https://jglrgibqrjxzvcornaxg.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnbHJnaWJxcmp4enZjb3JuYXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MjI2MDgsImV4cCI6MjA3Mjk5ODYwOH0.nnOg96INLLv1kbRKKBdAUl-fTtP3oDBVcsVudCLECqY';
+const supabaseUrl = Config.SUPABASE_URL || '';
+const supabaseAnonKey = Config.SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase non configuré. Veuillez remplir le fichier .env');
+}
+
+// Exposés pour les appels directs à l'API Storage (fetch avec FormData)
+export const SUPABASE_URL = supabaseUrl;
+export const SUPABASE_ANON_KEY = supabaseAnonKey;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

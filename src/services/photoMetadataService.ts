@@ -7,7 +7,7 @@ export interface PhotoMetadata {
   user_id?: string;
   photo_path: string;
   photo_url?: string;
-  
+
   // Données IA
   animal_type?: string;
   breed?: string;
@@ -18,25 +18,25 @@ export interface PhotoMetadata {
   eye_color?: string;
   size_category?: string;
   age_estimate?: string;
-  
+
   // Métadonnées IA
   ai_provider?: string;
   ai_model?: string;
   ai_raw_response?: any;
   ai_processed_at?: string;
   ai_processing_time_ms?: number;
-  
+
   // Métadonnées utilisateur
   custom_name?: string;
   custom_description?: string;
   is_favorite?: boolean;
   tags?: string[];
-  
+
   // Géolocalisation
   latitude?: number;
   longitude?: number;
   location_name?: string;
-  
+
   // Timestamps
   created_at?: string;
   updated_at?: string;
@@ -53,8 +53,6 @@ class PhotoMetadataService {
     processingTimeMs: number
   ): Promise<{ success: boolean; error?: string; data?: PhotoMetadata }> {
     try {
-      console.log('💾 Sauvegarde des métadonnées photo...');
-      
       // Récupérer l'utilisateur actuel
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
@@ -70,7 +68,6 @@ class PhotoMetadataService {
         ai_model: 'gpt-4o-mini',
         ai_processed_at: new Date().toISOString(),
         ai_processing_time_ms: processingTimeMs,
-        ai_raw_response: aiResult.raw_response,
       };
 
       // Si un animal a été détecté, ajouter ses caractéristiques
@@ -94,18 +91,15 @@ class PhotoMetadataService {
         .single();
 
       if (error) {
-        console.error('❌ Erreur Supabase:', error);
-        throw new Error(`Erreur base de données: ${error.message}`);
+        throw new Error('Erreur lors de la sauvegarde');
       }
 
-      console.log('✅ Métadonnées sauvegardées avec succès');
       return { success: true, data };
 
     } catch (error) {
-      console.error('❌ Erreur lors de la sauvegarde des métadonnées:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Erreur lors de la sauvegarde' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur lors de la sauvegarde'
       };
     }
   }
@@ -123,21 +117,14 @@ class PhotoMetadataService {
         .select('*')
         .eq('user_id', user.id)
         .eq('photo_path', photoPath)
-        .maybeSingle(); // Utilise maybeSingle() au lieu de single()
+        .maybeSingle();
 
-      // Si pas de données trouvées, c'est normal (photo sans analyse)
-      if (!data) {
-        return { success: false };
-      }
-
-      if (error) {
-        console.error('Erreur récupération métadonnées:', error);
+      if (!data || error) {
         return { success: false };
       }
 
       return { success: true, metadata: data };
-    } catch (error) {
-      console.error('Erreur lors de la récupération des métadonnées:', error);
+    } catch {
       return { success: false };
     }
   }
@@ -157,13 +144,11 @@ class PhotoMetadataService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erreur récupération photos:', error);
         return [];
       }
 
       return data || [];
-    } catch (error) {
-      console.error('Erreur lors de la récupération des photos:', error);
+    } catch {
       return [];
     }
   }
@@ -172,7 +157,7 @@ class PhotoMetadataService {
    * Met à jour les métadonnées personnalisées d'une photo
    */
   async updatePhotoMetadata(
-    photoId: string, 
+    photoId: string,
     updates: Partial<PhotoMetadata>
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -185,13 +170,13 @@ class PhotoMetadataService {
         .eq('id', photoId)
         .eq('user_id', user.id);
 
-      if (error) throw new Error(error.message);
+      if (error) throw new Error('Erreur lors de la mise à jour');
 
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.message || 'Erreur lors de la mise à jour' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur lors de la mise à jour'
       };
     }
   }
@@ -210,13 +195,13 @@ class PhotoMetadataService {
         .eq('id', photoId)
         .eq('user_id', user.id);
 
-      if (error) throw new Error(error.message);
+      if (error) throw new Error('Erreur lors de la suppression');
 
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error.message || 'Erreur lors de la suppression' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur lors de la suppression'
       };
     }
   }
@@ -237,13 +222,11 @@ class PhotoMetadataService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erreur recherche par animal:', error);
         return [];
       }
 
       return data || [];
-    } catch (error) {
-      console.error('Erreur lors de la recherche:', error);
+    } catch {
       return [];
     }
   }
@@ -275,7 +258,6 @@ class PhotoMetadataService {
         favoritePhotos: data.filter(item => item.is_favorite).length,
       };
 
-      // Compter les types d'animaux
       data.forEach(item => {
         if (item.animal_type) {
           stats.animalTypes[item.animal_type] = (stats.animalTypes[item.animal_type] || 0) + 1;
@@ -283,8 +265,7 @@ class PhotoMetadataService {
       });
 
       return stats;
-    } catch (error) {
-      console.error('Erreur lors du calcul des statistiques:', error);
+    } catch {
       return { totalPhotos: 0, totalAnimals: 0, animalTypes: {}, favoritePhotos: 0 };
     }
   }

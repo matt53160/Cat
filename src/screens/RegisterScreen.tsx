@@ -14,25 +14,40 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { supabase } from '../lib/supabase';
 
-export default function LoginScreen({ navigation }: any) {
+export default function RegisterScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  async function signInWithEmail() {
+  async function signUpWithEmail() {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs.');
       return;
     }
 
+    if (password.length < 6) {
+      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas.');
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password: password,
     });
 
-    if (error) Alert.alert('Erreur', 'Email ou mot de passe incorrect.');
+    if (error) {
+      Alert.alert('Erreur', 'Impossible de créer le compte. Vérifiez vos informations.');
+    } else if (data.user) {
+      Alert.alert('Bienvenue !', 'Votre compte a été créé avec succès.');
+    }
     setLoading(false);
   }
 
@@ -42,8 +57,12 @@ export default function LoginScreen({ navigation }: any) {
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Text style={styles.title}>Catspot</Text>
-        <Text style={styles.subtitle}>Identifiez les animaux autour de vous</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Créer un compte</Text>
+        <Text style={styles.subtitle}>Rejoignez Catspot pour identifier vos animaux</Text>
 
         <TextInput
           style={styles.input}
@@ -78,22 +97,32 @@ export default function LoginScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
+        <TextInput
+          style={styles.input}
+          placeholder="Confirmer le mot de passe"
+          placeholderTextColor="#8E8E93"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+        />
+
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={signInWithEmail}
+          onPress={signUpWithEmail}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.buttonText}>Se connecter</Text>
+            <Text style={styles.buttonText}>Créer mon compte</Text>
           )}
         </TouchableOpacity>
 
         <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>Pas encore de compte ? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.footerLink}>S'inscrire</Text>
+          <Text style={styles.footerText}>Déjà un compte ? </Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.footerLink}>Se connecter</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -111,17 +140,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  backButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    padding: 8,
+  },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
     color: '#FFFFFF',
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
     color: '#8E8E93',
-    textAlign: 'center',
     marginBottom: 32,
   },
   input: {

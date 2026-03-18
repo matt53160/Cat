@@ -16,10 +16,14 @@ import {
 } from 'react-native-vision-camera';
 import { launchImageLibrary, ImagePickerResponse, MediaType } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
 import UploadingScreen from '../components/UploadingScreen';
 import { aiAnalysisService } from '../services/aiAnalysisService';
 import { photoMetadataService } from '../services/photoMetadataService';
+
+// Limites de validation des fichiers
+const MAX_FILE_SIZE_MB = 10;
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif'];
 
 export default function CameraScreen({ navigation }: any) {
   const device = useCameraDevice('back');
@@ -36,6 +40,27 @@ export default function CameraScreen({ navigation }: any) {
     }
   }, [hasPermission, requestPermission]);
 
+  const validateFile = async (imageUri: string): Promise<{ valid: boolean; error?: string }> => {
+    try {
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+
+      // Vérifier la taille
+      if (blob.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        return { valid: false, error: `La photo dépasse la taille maximale de ${MAX_FILE_SIZE_MB} Mo` };
+      }
+
+      // Vérifier le type MIME
+      if (blob.type && !ALLOWED_MIME_TYPES.includes(blob.type)) {
+        return { valid: false, error: 'Format de fichier non supporté. Utilisez JPEG, PNG ou HEIC.' };
+      }
+
+      return { valid: true };
+    } catch {
+      return { valid: false, error: 'Impossible de lire le fichier' };
+    }
+  };
+
   const uploadImageToSupabase = async (imageUri: string, fileName: string) => {
     try {
       // Récupérer l'utilisateur connecté
@@ -44,7 +69,13 @@ export default function CameraScreen({ navigation }: any) {
         return { message: 'Utilisateur non connecté' };
       }
 
-      // Pour Android, on doit créer un FormData au lieu d'un blob
+      // Valider le fichier avant upload
+      const validation = await validateFile(imageUri);
+      if (!validation.valid) {
+        return { message: validation.error };
+      }
+
+      // Créer le FormData
       const formData = new FormData();
       formData.append('file', {
         uri: imageUri,
@@ -56,122 +87,115 @@ export default function CameraScreen({ navigation }: any) {
       const userFolder = user.email || user.id;
       const filePath = `user-photos/${userFolder}/${fileName}`;
 
-      // Utiliser fetch directement avec l'API Supabase Storage
-      const supabaseUrl = 'https://jglrgibqrjxzvcornaxg.supabase.co';
-      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnbHJnaWJxcmp4enZjb3JuYXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MjI2MDgsImV4cCI6MjA3Mjk5ODYwOH0.nnOg96INLLv1kbRKKBdAUl-fTtP3oDBVcsVudCLECqY';
-      
-      console.log(`Upload vers: ${filePath}`);
-      
+      // Récupérer le token de session pour l'authentification
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        return { message: 'Session expirée, veuillez vous reconnecter' };
+      }
+
+      // Upload via l'API Supabase Storage avec le token de session
       const response = await fetch(
-        `${supabaseUrl}/storage/v1/object/photos/${filePath}`,
+        `${SUPABASE_URL}/storage/v1/object/photos/${filePath}`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${accessToken}`,
+            'apikey': SUPABASE_ANON_KEY,
           },
           body: formData,
         }
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Erreur réponse Supabase:', errorText);
-        return { message: `Erreur HTTP ${response.status}: ${errorText}` };
+        return { message: 'Erreur lors de l\'envoi de la photo' };
       }
 
-      console.log('Photo uploadée avec succès dans:', filePath);
-      
       // Générer l'URL publique
       const { data: urlData } = supabase.storage
         .from('photos')
         .getPublicUrl(filePath);
 
       return { filePath, publicUrl: urlData.publicUrl };
-    } catch (uploadError) {
-      console.error('Erreur lors de l\'upload:', uploadError);
-      return { message: `Erreur réseau: ${uploadError.message || 'Vérifiez votre connexion'}` };
+    } catch {
+      return { message: 'Erreur réseau, vérifiez votre connexion' };
     }
   };
 
   const processPhotoWithAI = async (imageUri: string, fileName: string) => {
     const startTime = Date.now();
-    
+
     try {
       setIsProcessing(true);
-      
+
       // Vérifier la configuration de l'API
       if (!aiAnalysisService.isConfigured()) {
         Alert.alert(
-          '⚠️ Configuration manquante',
-          'L\'API OpenAI n\'est pas configurée. La photo sera sauvegardée sans analyse IA.\n\nVeuillez configurer votre clé API dans src/config/apiConfig.ts',
+          'Configuration manquante',
+          'L\'API OpenAI n\'est pas configurée. La photo sera sauvegardée sans analyse IA.\n\nVeuillez configurer votre clé API dans le fichier .env',
           [{ text: 'OK' }]
         );
-        
+
         // Sauvegarder sans analyse IA
         setProcessingStep('uploading');
         setProcessingMessage('Sauvegarde sans analyse IA...');
-        
+
         const uploadResult = await uploadImageToSupabase(imageUri, fileName);
         if (uploadResult.message) {
           throw new Error(uploadResult.message);
         }
-        
+
         setProcessingStep('success');
         setProcessingMessage('Photo sauvegardée !');
-        
+
         setTimeout(() => {
           setIsProcessing(false);
           Alert.alert('Photo sauvegardée', 'Votre photo a été sauvegardée sans analyse IA.');
         }, 1500);
         return;
       }
-      
+
       // Étape 1: Upload de l'image
       setProcessingStep('uploading');
       setProcessingMessage('Envoi de votre photo...');
-      
+
       const uploadResult = await uploadImageToSupabase(imageUri, fileName);
       if (uploadResult.message) {
         throw new Error(uploadResult.message);
       }
-      
+
       // Étape 2: Analyse IA
       setProcessingStep('analyzing');
       setProcessingMessage('Analyse de l\'animal avec l\'IA...');
-      
+
       const aiResult = await aiAnalysisService.analyzeImage(imageUri);
-      
+
       if (!aiResult.success) {
         throw new Error(aiResult.error || 'Erreur d\'analyse IA');
       }
-      
+
       // Étape 3: Sauvegarde des métadonnées
       setProcessingStep('saving');
       setProcessingMessage('Sauvegarde des informations...');
-      
+
       const processingTime = Date.now() - startTime;
-      const metadataResult = await photoMetadataService.savePhotoMetadata(
+      await photoMetadataService.savePhotoMetadata(
         uploadResult.filePath,
         uploadResult.publicUrl,
         aiResult,
         processingTime
       );
-      
-      if (!metadataResult.success) {
-        console.warn('Erreur sauvegarde métadonnées:', metadataResult.error);
-        // On continue quand même car la photo est uploadée
-      }
-      
+
       // Étape 4: Succès
       setProcessingStep('success');
-      
+
       if (!aiResult.hasAnimal) {
         setProcessingMessage('Aucun animal détecté dans cette photo.');
         setTimeout(() => {
           setIsProcessing(false);
           Alert.alert(
-            'Photo sauvegardée', 
+            'Photo sauvegardée',
             'Votre photo a été sauvegardée, mais aucun animal n\'a été détecté.',
             [{ text: 'OK' }]
           );
@@ -181,11 +205,11 @@ export default function CameraScreen({ navigation }: any) {
         setProcessingMessage(
           `${animalInfo.animal_type} détecté ! ${animalInfo.primary_color}${animalInfo.coat_pattern ? ', ' + animalInfo.coat_pattern : ''}`
         );
-        
+
         setTimeout(() => {
           setIsProcessing(false);
           Alert.alert(
-            '🐾 Animal détecté !', 
+            'Animal détecté !',
             `Type: ${animalInfo.animal_type}\nCouleur: ${animalInfo.primary_color}\nMotif: ${animalInfo.coat_pattern || 'Non défini'}${animalInfo.breed != "null" ? `\nRace: ${animalInfo.breed }` :  `\nRace: Incertain`}`,
             [
               { text: 'Voir la galerie', onPress: () => navigation.navigate('Gallery') },
@@ -194,15 +218,14 @@ export default function CameraScreen({ navigation }: any) {
           );
         }, 2000);
       }
-      
+
     } catch (error) {
-      console.error('Erreur processus complet:', error);
       setProcessingStep('error');
-      setProcessingMessage(error.message || 'Une erreur est survenue');
-      
+      setProcessingMessage('Une erreur est survenue');
+
       setTimeout(() => {
         setIsProcessing(false);
-        Alert.alert('Erreur', error.message || 'Une erreur est survenue lors du traitement');
+        Alert.alert('Erreur', 'Une erreur est survenue lors du traitement de la photo.');
       }, 2000);
     }
   };
@@ -211,16 +234,15 @@ export default function CameraScreen({ navigation }: any) {
     if (camera.current && !isCapturing && !isProcessing) {
       setIsCapturing(true);
       try {
-        console.log('Prise de photo en cours...');
         const photo = await camera.current.takePhoto({
           flash: 'off',
         });
-        
+
         setIsCapturing(false);
-        
+
         const fileName = `${Date.now()}.jpg`;
         await processPhotoWithAI(`file://${photo.path}`, fileName);
-        
+
       } catch (error) {
         setIsCapturing(false);
         setIsProcessing(false);
@@ -233,7 +255,7 @@ export default function CameraScreen({ navigation }: any) {
     if (Platform.OS === 'android') {
       const permission = PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES;
       const hasPermission = await PermissionsAndroid.check(permission);
-      
+
       if (hasPermission) {
         return true;
       }
@@ -253,7 +275,7 @@ export default function CameraScreen({ navigation }: any) {
 
   const pickImage = async () => {
     const hasPermission = await requestStoragePermission();
-    
+
     if (!hasPermission) {
       Alert.alert(
         'Permission requise',
@@ -276,7 +298,7 @@ export default function CameraScreen({ navigation }: any) {
     launchImageLibrary(options, async (response: ImagePickerResponse) => {
       if (response.didCancel || response.errorMessage) {
         if (response.errorMessage) {
-          Alert.alert('Erreur', response.errorMessage);
+          Alert.alert('Erreur', 'Impossible de sélectionner la photo');
         }
         return;
       }
@@ -311,9 +333,9 @@ export default function CameraScreen({ navigation }: any) {
           <Icon name="images-outline" size={24} color="white" />
           <Text style={styles.importButtonText}>Importer une photo</Text>
         </TouchableOpacity>
-        
-        <UploadingScreen 
-          visible={isProcessing} 
+
+        <UploadingScreen
+          visible={isProcessing}
           message={processingMessage}
           step={processingStep}
         />
@@ -337,9 +359,9 @@ export default function CameraScreen({ navigation }: any) {
           <Icon name="images-outline" size={24} color="white" />
           <Text style={styles.importButtonText}>Importer une photo</Text>
         </TouchableOpacity>
-        
-        <UploadingScreen 
-          visible={isProcessing} 
+
+        <UploadingScreen
+          visible={isProcessing}
           message={processingMessage}
           step={processingStep}
         />
@@ -374,9 +396,9 @@ export default function CameraScreen({ navigation }: any) {
           <View style={styles.captureButtonInner} />
         </TouchableOpacity>
       </View>
-      
-      <UploadingScreen 
-        visible={isProcessing} 
+
+      <UploadingScreen
+        visible={isProcessing}
         message={processingMessage}
         step={processingStep}
       />
