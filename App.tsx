@@ -13,6 +13,7 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import CameraScreen from './src/screens/CameraScreen';
 import GalleryScreen from './src/screens/GalleryScreen';
+import CatCityScreen from './src/screens/CatCityScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,6 +43,8 @@ function TabNavigator() {
             iconName = focused ? 'camera' : 'camera-outline';
           } else if (route.name === 'Gallery') {
             iconName = focused ? 'images' : 'images-outline';
+          } else if (route.name === 'CatCity') {
+            iconName = focused ? 'paw' : 'paw-outline';
           }
 
           return <Icon name={iconName} size={size} color={color} />;
@@ -76,6 +79,11 @@ function TabNavigator() {
         name="Gallery"
         component={GalleryScreen}
         options={{ title: 'Galerie' }}
+      />
+      <Tab.Screen
+        name="CatCity"
+        component={CatCityScreen}
+        options={{ title: 'CatCity' }}
       />
     </Tab.Navigator>
   );
