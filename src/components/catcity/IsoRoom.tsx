@@ -96,9 +96,18 @@ function SelectionHighlight({ placed, originX, originY }: {
 export default function IsoRoom({ map, furniture, cats, selectedFurnitureId, onFurnitureTap }: IsoRoomProps) {
   const pixelSize = gridPixelSize(map.gridW, map.gridH);
   const svgW = Math.max(SCREEN_WIDTH, pixelSize.width + 40);
-  const svgH = pixelSize.height + map.wall.height + 120;
+
+  // Compute top padding: must be large enough so that the tallest furniture
+  // placed at grid (0,0) doesn't extend above the SVG viewBox (y < 0).
+  const maxVisualH = furniture.reduce((max, placed) => {
+    const def = getFurnitureDef(placed.defId);
+    return def ? Math.max(max, def.visualHeight) : max;
+  }, 0);
+  const topPadding = Math.max(map.wall.height, maxVisualH) + 20;
+
+  const svgH = pixelSize.height + topPadding + 100;
   const originX = svgW / 2;
-  const originY = map.wall.height + 20;
+  const originY = topPadding;
 
   const floorTiles = useMemo(() => {
     const tiles: React.ReactNode[] = [];

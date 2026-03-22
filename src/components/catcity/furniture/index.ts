@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image as SvgImage } from 'react-native-svg';
 import { FurnitureDef } from '../engine/types';
+import { TILE_W, TILE_H } from '../engine/IsoGrid';
 
 // ─── PNG asset imports ───────────────────────────────
 const ASSETS: Record<string, any> = {
@@ -22,6 +23,23 @@ const ASSETS: Record<string, any> = {
   wardrobe: require('../../../assets/furniture/wardrobe.png'),
   armchair_red_set: require('../../../assets/furniture/armchair_red_set.png'),
 };
+
+/**
+ * Compute the actual visual height (pixels above the floor) for a PNG furniture
+ * sprite, using the real tile dimensions. This ensures the SVG viewBox is never
+ * too small and avoids clipping.
+ */
+function computeVisualHeight(
+  imgW: number, imgH: number,
+  gridW: number, gridH: number,
+  scale: number, offsetY: number,
+): number {
+  const footprintW = (gridW + gridH) * (TILE_W / 2);
+  const displayW = footprintW * scale;
+  const displayH = displayW * (imgH / imgW);
+  const floorH = (gridW + gridH) * (TILE_H / 2);
+  return Math.ceil(displayH - floorH - offsetY);
+}
 
 /**
  * Helper: creates a render function that draws a PNG sprite
@@ -78,7 +96,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Canapé rouge',
     gridW: 2,
     gridH: 1,
-    visualHeight: 60,
+    visualHeight: computeVisualHeight(391, 347, 2, 1, 1.15, 2),
     catSpot: { offsetX: 20, offsetY: -30, pose: 'sitting' },
     render: pngRender('sofa_red', 391, 347, 2, 1, 1.15, -5, 2),
   },
@@ -87,7 +105,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Canapé rouge L',
     gridW: 2,
     gridH: 1,
-    visualHeight: 55,
+    visualHeight: computeVisualHeight(109, 189, 2, 1, 1.1, 0),
     catSpot: { offsetX: 20, offsetY: -25, pose: 'sitting' },
     render: pngRender('sofa_red_back', 109, 189, 2, 1, 1.1, 0, 0),
   },
@@ -96,7 +114,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Canapé bleu',
     gridW: 3,
     gridH: 2,
-    visualHeight: 55,
+    visualHeight: computeVisualHeight(346, 343, 3, 2, 1.0, 2),
     catSpot: { offsetX: 30, offsetY: -25, pose: 'sitting' },
     render: pngRender('sofa_blue_L', 346, 343, 3, 2, 1.0, 0, 2),
   },
@@ -105,7 +123,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Méridienne',
     gridW: 2,
     gridH: 1,
-    visualHeight: 45,
+    visualHeight: computeVisualHeight(371, 355, 2, 1, 1.1, 0),
     catSpot: { offsetX: 15, offsetY: -20, pose: 'sleeping' },
     render: pngRender('chaise_longue', 371, 355, 2, 1, 1.1, -2, 0),
   },
@@ -114,7 +132,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Coin lecture',
     gridW: 2,
     gridH: 2,
-    visualHeight: 70,
+    visualHeight: computeVisualHeight(319, 490, 2, 2, 1.0, 0),
     catSpot: { offsetX: 10, offsetY: -30, pose: 'sitting' },
     render: pngRender('armchair_red_set', 319, 490, 2, 2, 1.0, 0, 0),
   },
@@ -123,7 +141,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Fauteuil bleu',
     gridW: 1,
     gridH: 1,
-    visualHeight: 40,
+    visualHeight: computeVisualHeight(236, 220, 1, 1, 1.15, 0),
     catSpot: { offsetX: 10, offsetY: -20, pose: 'sitting' },
     render: pngRender('chair_blue', 236, 220, 1, 1, 1.15, 0, 0),
   },
@@ -132,7 +150,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Lit',
     gridW: 3,
     gridH: 2,
-    visualHeight: 70,
+    visualHeight: computeVisualHeight(500, 523, 3, 2, 1.05, -2),
     catSpot: { offsetX: 30, offsetY: -30, pose: 'sleeping' },
     render: pngRender('bed', 500, 523, 3, 2, 1.05, 0, -2),
   },
@@ -141,7 +159,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Table basse',
     gridW: 2,
     gridH: 1,
-    visualHeight: 20,
+    visualHeight: computeVisualHeight(287, 239, 2, 1, 1.1, 2),
     render: pngRender('coffee_table', 287, 239, 2, 1, 1.1, 0, 2),
   },
   {
@@ -149,7 +167,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Bibliothèque',
     gridW: 1,
     gridH: 1,
-    visualHeight: 90,
+    visualHeight: computeVisualHeight(196, 509, 1, 1, 1.1, -5),
     render: pngRender('bookshelf', 196, 509, 1, 1, 1.1, 0, -5),
   },
   {
@@ -157,7 +175,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Chevet',
     gridW: 1,
     gridH: 1,
-    visualHeight: 50,
+    visualHeight: computeVisualHeight(195, 319, 1, 1, 1.0, 0),
     render: pngRender('nightstand', 195, 319, 1, 1, 1.0, 0, 0),
   },
   {
@@ -165,7 +183,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Commode',
     gridW: 2,
     gridH: 1,
-    visualHeight: 60,
+    visualHeight: computeVisualHeight(241, 345, 2, 1, 1.0, 0),
     render: pngRender('dresser', 241, 345, 2, 1, 1.0, 0, 0),
   },
   {
@@ -173,7 +191,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Armoire',
     gridW: 2,
     gridH: 1,
-    visualHeight: 90,
+    visualHeight: computeVisualHeight(370, 358, 2, 1, 1.0, -8),
     render: pngRender('wardrobe', 370, 358, 2, 1, 1.0, 0, -8),
   },
   {
@@ -181,7 +199,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Cheminée',
     gridW: 2,
     gridH: 1,
-    visualHeight: 100,
+    visualHeight: computeVisualHeight(340, 632, 2, 1, 1.0, -5),
     render: pngRender('fireplace', 340, 632, 2, 1, 1.0, 0, -5),
   },
   {
@@ -189,7 +207,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Home cinéma',
     gridW: 2,
     gridH: 1,
-    visualHeight: 65,
+    visualHeight: computeVisualHeight(240, 317, 2, 1, 1.05, -2),
     render: pngRender('tv_stand', 240, 317, 2, 1, 1.05, 0, -2),
   },
   {
@@ -197,7 +215,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Miroir',
     gridW: 1,
     gridH: 1,
-    visualHeight: 55,
+    visualHeight: computeVisualHeight(195, 319, 1, 1, 1.0, -5),
     render: pngRender('mirror', 195, 319, 1, 1, 1.0, 0, -5),
   },
   {
@@ -205,7 +223,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Coiffeuse',
     gridW: 2,
     gridH: 1,
-    visualHeight: 65,
+    visualHeight: computeVisualHeight(255, 368, 2, 1, 1.05, 0),
     render: pngRender('vanity', 255, 368, 2, 1, 1.05, 0, 0),
   },
   {
@@ -213,7 +231,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     name: 'Étagère murale',
     gridW: 1,
     gridH: 1,
-    visualHeight: 60,
+    visualHeight: computeVisualHeight(182, 332, 1, 1, 1.0, -8),
     render: pngRender('wall_shelf', 182, 332, 1, 1, 1.0, 0, -8),
   },
 ];
