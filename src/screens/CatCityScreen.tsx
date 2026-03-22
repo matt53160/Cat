@@ -163,7 +163,7 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
   if (!visible) return null;
   return (
     <Animated.View
-      entering={SlideInDown.springify().damping(15)}
+      entering={SlideInDown.springify().damping(30).stiffness(100)}
       exiting={FadeOut.duration(300)}
       style={toastStyles.container}
     >
