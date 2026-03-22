@@ -39,7 +39,20 @@
       "Bash(findstr LISTENING)",
       "Bash(taskkill:*)",
       "Bash(npm view:*)",
-      "Bash(./gradlew.bat app:installDebug -PreactNativeDevServerPort=8081)"
+      "Bash(./gradlew.bat app:installDebug -PreactNativeDevServerPort=8081)",
+      "Bash(find C:UsersmatteDocumentsGitHubCat -type f \\\\\\(-name *.sql -o -name *migration* -o -name *schema* \\\\\\))",
+      "Read(//c/Program Files/Inkscape/bin/**)",
+      "Read(//c/Program Files \\(x86\\)/Inkscape/bin/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(\"/c/Program Files/Inkscape/bin/inkscape.exe\" \"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\19341.eps\" --export-type=svg --export-filename=\"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\src\\\\assets\\\\furniture\\\\all_furniture.svg\")",
+      "Bash(winget install:*)",
+      "Bash(winget search:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/gs/gs10.04.0/bin\")",
+      "Bash(\"/c/Program Files/gs/gs10.04.0/bin/gswin64c.exe\" -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile=\"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\src\\\\assets\\\\furniture\\\\all_furniture.pdf\" \"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\19341.eps\" 2>&1)",
+      "Bash(\"/c/Program Files/Inkscape/bin/inkscape.exe\" \"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\src\\\\assets\\\\furniture\\\\all_furniture.pdf\" --export-type=svg --export-filename=\"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\src\\\\assets\\\\furniture\\\\all_furniture.svg\" 2>&1)",
+      "Bash(\"/c/Program Files/Inkscape/bin/inkscape.exe\" \"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\src\\\\assets\\\\furniture\\\\all_furniture.svg\" --export-type=png --export-filename=\"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\src\\\\assets\\\\furniture\\\\preview.png\" --export-width=1200 2>&1)",
+      "Bash(git -C \"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\" checkout -- \"__tests__/App.test.tsx\")",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "ask": []
