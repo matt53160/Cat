@@ -4,7 +4,7 @@ import Svg, { G, Path } from 'react-native-svg';
 import { MapDef, PlacedFurniture, CatState } from './engine/types';
 import { gridToScreen, zOrder, TILE_W, TILE_H, gridPixelSize } from './engine/IsoGrid';
 import { getFurnitureDef } from './furniture';
-import CatSprite from './CatSprite';
+import CatSprite from './cat';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

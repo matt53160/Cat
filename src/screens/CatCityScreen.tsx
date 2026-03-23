@@ -41,7 +41,7 @@ import {
 import { getFurnitureDef, getAllFurniture } from '../components/catcity/furniture';
 import { salonMap } from '../components/catcity/maps/salon';
 import IsoRoom from '../components/catcity/IsoRoom';
-import CatSprite from '../components/catcity/CatSprite';
+import CatSprite from '../components/catcity/cat';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -56,19 +56,19 @@ function mapFurColor(color?: string | null): string {
   if (!val) return '#B0A090';
   const c = val.toLowerCase();
   const m: Record<string, string> = {
-    noir: '#3A3A3A', black: '#3A3A3A',
-    blanc: '#F0EBE0', white: '#F0EBE0',
-    gris: '#9A9A9A', gray: '#9A9A9A', grey: '#9A9A9A',
-    roux: '#D4854A', orange: '#E8A050', ginger: '#D4854A',
-    marron: '#8B6840', brown: '#8B6840',
-    'crème': '#F0DCC0', cream: '#F0DCC0', beige: '#E8D8C0',
-    'tigré': '#B08050', tabby: '#B08050',
-    bleu: '#8A9AAA', blue: '#8A9AAA',
-    chocolat: '#6A4A30', chocolate: '#6A4A30',
+    noir: '#2D2D3A', black: '#2D2D3A',
+    blanc: '#FEFEFA', white: '#FEFEFA',
+    gris: '#A8B0BC', gray: '#A8B0BC', grey: '#A8B0BC',
+    roux: '#F09040', orange: '#FF9F33', ginger: '#F09040',
+    marron: '#A06030', brown: '#A06030',
+    'crème': '#FFECC8', cream: '#FFECC8', beige: '#FFE8C0',
+    'tigré': '#C89050', tabby: '#C89050',
+    bleu: '#90A8C0', blue: '#90A8C0',
+    chocolat: '#7A4A28', chocolate: '#7A4A28',
   };
   if (m[c]) return m[c];
   for (const [key, v] of Object.entries(m)) { if (c.includes(key)) return v; }
-  return '#B0A090';
+  return '#C8A888';
 }
 
 function mapEyeColor(color?: string | null): string {
@@ -76,17 +76,17 @@ function mapEyeColor(color?: string | null): string {
   if (!val) return '#7CB8D9';
   const c = val.toLowerCase();
   const m: Record<string, string> = {
-    vert: '#6AAF50', green: '#6AAF50',
-    bleu: '#5A9AC0', blue: '#5A9AC0',
-    jaune: '#D4B840', yellow: '#D4B840', gold: '#D4A830',
-    ambre: '#D4A040', amber: '#D4A040',
-    noisette: '#A08040', hazel: '#A08040',
-    orange: '#D08030',
-    marron: '#8A6830', brown: '#8A6830',
+    vert: '#50CC50', green: '#50CC50',
+    bleu: '#4AADEE', blue: '#4AADEE',
+    jaune: '#F0C830', yellow: '#F0C830', gold: '#EEAA20',
+    ambre: '#E8A030', amber: '#E8A030',
+    noisette: '#B88840', hazel: '#B88840',
+    orange: '#F08020',
+    marron: '#A07030', brown: '#A07030',
   };
   if (m[c]) return m[c];
   for (const [key, v] of Object.entries(m)) { if (c.includes(key)) return v; }
-  return '#7CB8D9';
+  return '#6CC8EE';
 }
 
 function mapPattern(pattern?: string): CatState['pattern'] {
@@ -125,7 +125,7 @@ function photosToAppearances(photos: PhotoMetadata[]): Omit<CatState, 'pos' | 'p
 }
 
 const DEFAULT_CAT: Omit<CatState, 'pos' | 'pose' | 'direction'> = {
-  id: 'default', name: 'Minou', furColor: '#E8A050', eyeColor: '#6AAF50', pattern: 'tabby',
+  id: 'default', name: 'Minou', furColor: '#FF9F33', eyeColor: '#50CC50', pattern: 'tabby',
 };
 
 const CAT_REACTIONS = ['Miaou !', 'Purrrr...', 'Mrrr~', '*ronronne*', 'Miaou ?', 'Prrrt !'];
@@ -217,8 +217,8 @@ function DraggableCat({
   }, [cat.pos.gx, cat.pos.gy, originX, originY]);
 
   useEffect(() => {
-    const dur = cat.pose === 'sleeping' ? 1500 : cat.pose === 'sitting' ? 2000 : 800;
-    const amp = cat.pose === 'sleeping' ? 2 : cat.pose === 'sitting' ? 1.5 : 3;
+    const dur = cat.pose === 'sleeping' ? 1500 : cat.pose === 'sitting' ? 2000 : cat.pose === 'licking' ? 600 : 800;
+    const amp = cat.pose === 'sleeping' ? 2 : cat.pose === 'sitting' ? 1.5 : cat.pose === 'licking' ? 1 : 3;
     bobY.value = withRepeat(
       withSequence(
         withTiming(-amp, { duration: dur, easing: Easing.inOut(Easing.sin) }),
@@ -279,7 +279,7 @@ function DraggableCat({
             appearance={cat}
             size={50}
             direction={cat.direction}
-            pose={cat.pose === 'walking' ? 'standing' : cat.pose}
+            pose={cat.pose === 'walking' ? 'standing' : cat.pose === 'licking' ? 'licking' : cat.pose}
           />
           <View style={catStyles.nameTag}>
             <Text style={catStyles.nameText} numberOfLines={1}>{cat.name}</Text>
@@ -696,42 +696,31 @@ export default function CatCityScreen() {
     loadCats();
   }, [loadRoom, loadCats]);
 
-  // ─── Auto-move cats ────────────────────────────
+  // ─── Licking animation – standing cats lick their paw periodically ───
   useEffect(() => {
     if (cats.length === 0) return;
     const interval = setInterval(() => {
       setCats(prev => {
-        const idx = Math.floor(Math.random() * prev.length);
-        const spotsFromFurniture = furniture
-          .map(f => {
-            const def = getFurnitureDef(f.defId);
-            if (!def?.catSpot) return null;
-            return { gx: f.pos.gx, gy: f.pos.gy, pose: def.catSpot.pose };
-          })
-          .filter(Boolean) as Array<{ gx: number; gy: number; pose: 'sitting' | 'sleeping' }>;
-
-        const floorSpots = [
-          { gx: 3, gy: 5, pose: 'standing' as const },
-          { gx: 5, gy: 3, pose: 'standing' as const },
-          { gx: 6, gy: 5, pose: 'standing' as const },
-          { gx: 2, gy: 6, pose: 'standing' as const },
-        ];
-
-        const allSpots = [...spotsFromFurniture, ...floorSpots];
-        const spot = allSpots[Math.floor(Math.random() * allSpots.length)];
-        return prev.map((c, i) => {
-          if (i !== idx) return c;
-          return {
-            ...c,
-            pos: { gx: spot.gx, gy: spot.gy },
-            pose: spot.pose,
-            direction: spot.gx > c.pos.gx ? 'right' : 'left',
-          };
-        });
+        const standingIndices = prev
+          .map((c, i) => c.pose === 'standing' ? i : -1)
+          .filter(i => i >= 0);
+        if (standingIndices.length === 0) return prev;
+        const idx = standingIndices[Math.floor(Math.random() * standingIndices.length)];
+        return prev.map((c, i) => i === idx ? { ...c, pose: 'licking' as const } : c);
       });
     }, 8000);
     return () => clearInterval(interval);
-  }, [cats.length, furniture]);
+  }, [cats.length]);
+
+  // Stop licking after 3 seconds
+  useEffect(() => {
+    const lickingCat = cats.find(c => c.pose === 'licking');
+    if (!lickingCat) return;
+    const timer = setTimeout(() => {
+      setCats(prev => prev.map(c => c.pose === 'licking' ? { ...c, pose: 'standing' as const } : c));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [cats]);
 
   // ─── Handlers ──────────────────────────────────
   const handleFurnitureTap = useCallback((id: string) => {

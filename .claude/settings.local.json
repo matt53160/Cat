@@ -53,7 +53,10 @@
       "Bash(\"/c/Program Files/Inkscape/bin/inkscape.exe\" \"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\src\\\\assets\\\\furniture\\\\all_furniture.svg\" --export-type=png --export-filename=\"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\\\\src\\\\assets\\\\furniture\\\\preview.png\" --export-width=1200 2>&1)",
       "Bash(git -C \"C:\\\\Users\\\\matte\\\\Documents\\\\GitHub\\\\Cat\" checkout -- \"__tests__/App.test.tsx\")",
       "Bash(cd:*)",
-      "Bash(grep -rn overflow /c/Users/matte/Documents/GitHub/Cat/src --include=*.tsx --include=*.ts)"
+      "Bash(grep -rn overflow /c/Users/matte/Documents/GitHub/Cat/src --include=*.tsx --include=*.ts)",
+      "WebSearch",
+      "Bash(xargs grep:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

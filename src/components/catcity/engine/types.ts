@@ -70,6 +70,6 @@ export interface CatState {
   pattern: 'solid' | 'tabby' | 'bicolor' | 'calico' | 'tuxedo';
   secondaryColor?: string;
   pos: GridPos;
-  pose: 'standing' | 'sitting' | 'sleeping' | 'walking';
+  pose: 'standing' | 'sitting' | 'sleeping' | 'walking' | 'licking';
   direction: 'left' | 'right';
 }
