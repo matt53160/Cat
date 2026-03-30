@@ -13,13 +13,3 @@ export function isOpenAIConfigured(): boolean {
   return !!OPENAI_CONFIG.API_KEY && OPENAI_CONFIG.API_KEY !== 'your_openai_api_key_here';
 }
 
-// Instructions pour configurer l'API
-export const SETUP_INSTRUCTIONS = `
-Pour activer la reconnaissance d'animaux par IA :
-
-1. Copiez .env.example en .env
-2. Remplissez vos clés API dans le fichier .env
-3. Relancez l'application
-
-Note : GPT-4o mini coute environ $0.15 pour 1000 images analysees
-`;

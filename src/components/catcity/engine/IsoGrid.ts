@@ -73,25 +73,6 @@ export function gridPixelSize(gridW: number, gridH: number) {
 }
 
 /**
- * Check if a grid cell is occupied by a furniture piece (considering footprint).
- */
-export function isCellOccupied(
-  gx: number,
-  gy: number,
-  furniturePositions: Array<{ pos: GridPos; gridW: number; gridH: number; walkable?: boolean }>,
-): boolean {
-  return furniturePositions.some(f => {
-    if (f.walkable) return false;
-    return (
-      gx >= f.pos.gx &&
-      gx < f.pos.gx + f.gridW &&
-      gy >= f.pos.gy &&
-      gy < f.pos.gy + f.gridH
-    );
-  });
-}
-
-/**
  * Check if placing a furniture of size (w x h) at (gx, gy) would overlap
  * any existing non-walkable furniture (excluding one by id).
  */

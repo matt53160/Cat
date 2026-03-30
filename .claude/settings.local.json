@@ -56,7 +56,10 @@
       "Bash(grep -rn overflow /c/Users/matte/Documents/GitHub/Cat/src --include=*.tsx --include=*.ts)",
       "WebSearch",
       "Bash(xargs grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -E \"^export \\(const|function|class|interface|type\\)\" /c/Users/matteo.djerbi.ext/Documents/GitHub/Cat/src/**/*.ts /c/Users/matteo.djerbi.ext/Documents/GitHub/Cat/src/**/*.tsx)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
