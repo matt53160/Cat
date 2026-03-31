@@ -696,31 +696,31 @@ export default function CatCityScreen() {
     loadCats();
   }, [loadRoom, loadCats]);
 
-  // ─── Licking animation – disabled while using pixel art renderer ───
-  // TODO: re-enable when licking pixel pose is available
-  // useEffect(() => {
-  //   if (cats.length === 0) return;
-  //   const interval = setInterval(() => {
-  //     setCats(prev => {
-  //       const standingIndices = prev
-  //         .map((c, i) => c.pose === 'standing' ? i : -1)
-  //         .filter(i => i >= 0);
-  //       if (standingIndices.length === 0) return prev;
-  //       const idx = standingIndices[Math.floor(Math.random() * standingIndices.length)];
-  //       return prev.map((c, i) => i === idx ? { ...c, pose: 'licking' as const } : c);
-  //     });
-  //   }, 8000);
-  //   return () => clearInterval(interval);
-  // }, [cats.length]);
+  // ─── Licking animation – standing cats lick their paw periodically ───
+  useEffect(() => {
+    if (cats.length === 0) return;
+    const interval = setInterval(() => {
+      setCats(prev => {
+        const standingIndices = prev
+          .map((c, i) => c.pose === 'standing' ? i : -1)
+          .filter(i => i >= 0);
+        if (standingIndices.length === 0) return prev;
+        const idx = standingIndices[Math.floor(Math.random() * standingIndices.length)];
+        return prev.map((c, i) => i === idx ? { ...c, pose: 'licking' as const } : c);
+      });
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [cats.length]);
 
-  // useEffect(() => {
-  //   const lickingCat = cats.find(c => c.pose === 'licking');
-  //   if (!lickingCat) return;
-  //   const timer = setTimeout(() => {
-  //     setCats(prev => prev.map(c => c.pose === 'licking' ? { ...c, pose: 'standing' as const } : c));
-  //   }, 3000);
-  //   return () => clearTimeout(timer);
-  // }, [cats]);
+  // Stop licking after 3 seconds
+  useEffect(() => {
+    const lickingCat = cats.find(c => c.pose === 'licking');
+    if (!lickingCat) return;
+    const timer = setTimeout(() => {
+      setCats(prev => prev.map(c => c.pose === 'licking' ? { ...c, pose: 'standing' as const } : c));
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [cats]);
 
   // ─── Handlers ──────────────────────────────────
   const handleFurnitureTap = useCallback((id: string) => {

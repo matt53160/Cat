@@ -30,6 +30,7 @@ export default function CatSprite({
     lighter: lighten(furColor, 40),
     belly: secondaryColor || lighten(furColor, 40),
     blush: '#FF90A0',
+    eyeLight: lighten(eyeColor, 50),
   };
 
   const props = { colors, w, h, flipTransform, direction };

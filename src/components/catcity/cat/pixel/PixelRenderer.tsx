@@ -19,6 +19,8 @@ function roleToColor(role: string, colors: DerivedColors): string | null {
     case 'S': return colors.darker;
     case 'L': return colors.lighter;
     case 'B': return colors.belly;
+    case 'E': return colors.eyeColor;
+    case 'R': return colors.eyeLight;
     default:  return null;
   }
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { darken, lighten } from './colorUtils';
 import { CatSpriteProps, DerivedColors } from './types';
-import { StandingPixel } from './pixel';
+import { StandingPixel, LickingPixel } from './pixel';
 
 export default function CatPixelSprite({
   appearance,
@@ -27,16 +27,15 @@ export default function CatPixelSprite({
     lighter: lighten(furColor, 40),
     belly: secondaryColor || lighten(furColor, 40),
     blush: '#FF90A0',
+    eyeLight: lighten(eyeColor, 50),
   };
 
   const props = { colors, w, h, flipTransform, direction };
 
-  // For now only standing is available in pixel art
-  // Other poses fall back to standing pixel
   switch (pose) {
+    case 'licking':  return <LickingPixel {...props} />;
     // case 'sleeping': return <SleepingPixel {...props} />;
     // case 'sitting':  return <SittingPixel {...props} />;
-    // case 'licking':  return <LickingPixel {...props} />;
     default:         return <StandingPixel {...props} />;
   }
 }
