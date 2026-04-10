@@ -26,6 +26,7 @@ export interface DerivedColors {
   lighter: string;
   belly: string;
   blush: string;
+  eyeLight: string;
 }
 
 export interface PoseProps {

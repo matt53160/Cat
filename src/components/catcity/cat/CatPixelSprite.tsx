@@ -1,12 +1,9 @@
 import React from 'react';
 import { darken, lighten } from './colorUtils';
 import { CatSpriteProps, DerivedColors } from './types';
-import SleepingCat from './poses/SleepingCat';
-import SittingCat from './poses/SittingCat';
-import LickingCat from './poses/LickingCat';
-import StandingCat from './poses/StandingCat';
+import { StandingPixel, LickingPixel } from './pixel';
 
-export default function CatSprite({
+export default function CatPixelSprite({
   appearance,
   size = 60,
   direction = 'right',
@@ -16,7 +13,7 @@ export default function CatSprite({
 
   const w = size;
   const h = size * 1.3;
-  const flipTransform = direction === 'left' ? 'translate(104, 0) scale(-1, 1)' : '';
+  const flipTransform = direction === 'left' ? 'flip' : '';
 
   const colors: DerivedColors = {
     furColor,
@@ -36,9 +33,9 @@ export default function CatSprite({
   const props = { colors, w, h, flipTransform, direction };
 
   switch (pose) {
-    case 'sleeping': return <SleepingCat {...props} />;
-    case 'sitting':  return <SittingCat {...props} />;
-    case 'licking':  return <LickingCat {...props} />;
-    default:         return <StandingCat {...props} />;
+    case 'licking':  return <LickingPixel {...props} />;
+    // case 'sleeping': return <SleepingPixel {...props} />;
+    // case 'sitting':  return <SittingPixel {...props} />;
+    default:         return <StandingPixel {...props} />;
   }
 }
