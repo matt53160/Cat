@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import Svg, { Rect, G } from 'react-native-svg';
+import { View } from 'react-native';
 import { DerivedColors } from '../types';
 
 interface PixelRendererProps {
@@ -26,8 +26,7 @@ function roleToColor(role: string, colors: DerivedColors): string | null {
 }
 
 /**
- * Merge adjacent horizontal pixels of the same role into single wider Rects.
- * This reduces ~3900 Rects down to ~600-800.
+ * Merge adjacent horizontal pixels of the same role into single wider blocks.
  */
 function buildMergedRects(
   grid: string[],
@@ -45,7 +44,6 @@ function buildMergedRects(
       const color = roleToColor(ch, colors);
       if (!color) { x++; continue; }
 
-      // Run-length: count consecutive same-role pixels
       let runLen = 1;
       while (x + runLen < row.length && row[x + runLen] === ch) {
         runLen++;
@@ -73,24 +71,29 @@ export default function PixelRenderer({
     [grid, colors],
   );
 
-  const flip = flipTransform
-    ? `translate(${gridW}, 0) scale(-1, 1)`
-    : undefined;
+  const pixelW = w / gridW;
+  const pixelH = h / gridH;
+  const shouldFlip = !!flipTransform;
 
   return (
-    <Svg width={w} height={h} viewBox={`0 0 ${gridW} ${gridH}`}>
-      <G transform={flip}>
-        {rects.map((p, i) => (
-          <Rect
-            key={i}
-            x={p.x}
-            y={p.y}
-            width={p.w}
-            height={1}
-            fill={p.color}
-          />
-        ))}
-      </G>
-    </Svg>
+    <View style={{
+      width: w,
+      height: h,
+      ...(shouldFlip ? { transform: [{ scaleX: -1 }] } : {}),
+    }}>
+      {rects.map((p, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: p.x * pixelW,
+            top: p.y * pixelH,
+            width: p.w * pixelW + 0.5,
+            height: pixelH + 0.5,
+            backgroundColor: p.color,
+          }}
+        />
+      ))}
+    </View>
   );
 }

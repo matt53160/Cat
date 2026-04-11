@@ -97,7 +97,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     gridW: 2,
     gridH: 1,
     visualHeight: computeVisualHeight(391, 347, 2, 1, 1.15, 2),
-    catSpot: { offsetX: 20, offsetY: -30, pose: 'sitting' },
+    catSpot: { offsetX: 10, offsetY: -15, pose: 'sitting' },
     render: pngRender('sofa_red', 391, 347, 2, 1, 1.15, -5, 2),
   },
   {
@@ -106,7 +106,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     gridW: 2,
     gridH: 1,
     visualHeight: computeVisualHeight(109, 189, 2, 1, 1.1, 0),
-    catSpot: { offsetX: 20, offsetY: -25, pose: 'sitting' },
+    catSpot: { offsetX: 10, offsetY: -13, pose: 'sitting' },
     render: pngRender('sofa_red_back', 109, 189, 2, 1, 1.1, 0, 0),
   },
   {
@@ -115,7 +115,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     gridW: 3,
     gridH: 2,
     visualHeight: computeVisualHeight(346, 343, 3, 2, 1.0, 2),
-    catSpot: { offsetX: 30, offsetY: -25, pose: 'sitting' },
+    catSpot: { offsetX: 15, offsetY: -13, pose: 'sitting' },
     render: pngRender('sofa_blue_L', 346, 343, 3, 2, 1.0, 0, 2),
   },
   {
@@ -124,7 +124,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     gridW: 2,
     gridH: 1,
     visualHeight: computeVisualHeight(371, 355, 2, 1, 1.1, 0),
-    catSpot: { offsetX: 15, offsetY: -20, pose: 'sleeping' },
+    catSpot: { offsetX: 8, offsetY: -10, pose: 'sleeping' },
     render: pngRender('chaise_longue', 371, 355, 2, 1, 1.1, -2, 0),
   },
   {
@@ -133,7 +133,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     gridW: 2,
     gridH: 2,
     visualHeight: computeVisualHeight(319, 490, 2, 2, 1.0, 0),
-    catSpot: { offsetX: 10, offsetY: -30, pose: 'sitting' },
+    catSpot: { offsetX: 5, offsetY: -15, pose: 'sitting' },
     render: pngRender('armchair_red_set', 319, 490, 2, 2, 1.0, 0, 0),
   },
   {
@@ -142,7 +142,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     gridW: 1,
     gridH: 1,
     visualHeight: computeVisualHeight(236, 220, 1, 1, 1.15, 0),
-    catSpot: { offsetX: 10, offsetY: -20, pose: 'sitting' },
+    catSpot: { offsetX: 5, offsetY: -10, pose: 'sitting' },
     render: pngRender('chair_blue', 236, 220, 1, 1, 1.15, 0, 0),
   },
   {
@@ -151,7 +151,7 @@ const FURNITURE_CATALOG: FurnitureDef[] = [
     gridW: 3,
     gridH: 2,
     visualHeight: computeVisualHeight(500, 523, 3, 2, 1.05, -2),
-    catSpot: { offsetX: 30, offsetY: -30, pose: 'sleeping' },
+    catSpot: { offsetX: 15, offsetY: -15, pose: 'sleeping' },
     render: pngRender('bed', 500, 523, 3, 2, 1.05, 0, -2),
   },
   {

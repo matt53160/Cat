@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, Image, Dimensions } from 'react-native';
 import Svg, { G, Path } from 'react-native-svg';
 import { MapDef, PlacedFurniture, CatState } from './engine/types';
 import { gridToScreen, zOrder, TILE_W, TILE_H, gridPixelSize } from './engine/IsoGrid';
@@ -37,7 +37,7 @@ function IsoTile({ gx, gy, originX, originY, color }: {
   return (
     <Path
       d={`M ${x} ${y - hh} L ${x + hw} ${y} L ${x} ${y + hh} L ${x - hw} ${y} Z`}
-      fill={color} stroke="#C9A86C" strokeWidth={0.5} opacity={0.9}
+      fill={color} stroke="#C9A86C" strokeWidth={0.25} opacity={0.9}
     />
   );
 }
@@ -51,9 +51,9 @@ function IsoWalls({ map, originX, originY }: { map: MapDef; originX: number; ori
     <G>
       <Path d={`M ${A.x} ${A.y} L ${B.x} ${B.y} L ${B.x} ${B.y - wallH} L ${A.x} ${A.y - wallH} Z`} fill={wall.backColor} />
       <Path d={`M ${D.x} ${D.y} L ${A.x} ${A.y} L ${A.x} ${A.y - wallH} L ${D.x} ${D.y - wallH} Z`} fill={wall.sideColor} />
-      <Path d={`M ${A.x} ${A.y} L ${B.x} ${B.y} L ${B.x} ${B.y - 4} L ${A.x} ${A.y - 4} Z`} fill="#C9B99A" />
-      <Path d={`M ${D.x} ${D.y} L ${A.x} ${A.y} L ${A.x} ${A.y - 4} L ${D.x} ${D.y - 4} Z`} fill="#BBA888" />
-      <Path d={`M ${A.x} ${A.y} L ${A.x} ${A.y - wallH}`} stroke="#C4AD96" strokeWidth={2} />
+      <Path d={`M ${A.x} ${A.y} L ${B.x} ${B.y} L ${B.x} ${B.y - 2} L ${A.x} ${A.y - 2} Z`} fill="#C9B99A" />
+      <Path d={`M ${D.x} ${D.y} L ${A.x} ${A.y} L ${A.x} ${A.y - 2} L ${D.x} ${D.y - 2} Z`} fill="#BBA888" />
+      <Path d={`M ${A.x} ${A.y} L ${A.x} ${A.y - wallH}`} stroke="#C4AD96" strokeWidth={1} />
     </G>
   );
 }
@@ -72,7 +72,7 @@ function SelectionHighlight({ placed, originX, originY }: {
       const hw = TILE_W / 2;
       const hh = TILE_H / 2;
       // Outer glow (larger, more transparent)
-      const pad = 6;
+      const pad = 3;
       halos.push(
         <Path
           key={`glow-outer-${dx}-${dy}`}
@@ -163,11 +163,48 @@ export default function IsoRoom({ map, furniture, cats, selectedFurnitureId, onF
     ? furniture.find(f => f.id === selectedFurnitureId)
     : null;
 
+  const hasBgImage = !!map.backgroundImage;
+
+  // When using a background image, scale it to match the SVG container width
+  const bgImageStyle = useMemo(() => {
+    if (!map.backgroundImage) return null;
+    const { width: imgW, height: imgH } = map.backgroundImage;
+    const scale = svgW / imgW;
+    return {
+      width: imgW * scale,
+      height: imgH * scale,
+    };
+  }, [map.backgroundImage, svgW]);
+
+  const containerHeight = hasBgImage && bgImageStyle
+    ? bgImageStyle.height
+    : svgH;
+
   return (
-    <View style={{ width: svgW, height: svgH }}>
-      <Svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`}>
-        <IsoWalls map={map} originX={originX} originY={originY} />
-        {floorTiles}
+    <View style={{ width: svgW, height: containerHeight }}>
+      {hasBgImage && bgImageStyle ? (
+        <Image
+          source={map.backgroundImage!.source}
+          style={{
+            position: 'absolute',
+            top: map.backgroundImage!.offsetY ?? 0,
+            left: 0,
+            width: bgImageStyle.width,
+            height: bgImageStyle.height,
+          }}
+          resizeMode="contain"
+        />
+      ) : null}
+
+      <Svg width={svgW} height={containerHeight} viewBox={`0 0 ${svgW} ${containerHeight}`}
+        style={{ position: 'absolute', top: 0, left: 0 }}
+      >
+        {!hasBgImage && (
+          <>
+            <IsoWalls map={map} originX={originX} originY={originY} />
+            {floorTiles}
+          </>
+        )}
         {/* Selection highlight under furniture */}
         {selectedPlaced && (
           <SelectionHighlight placed={selectedPlaced} originX={originX} originY={originY} />
@@ -181,11 +218,11 @@ export default function IsoRoom({ map, furniture, cats, selectedFurnitureId, onF
           <View key={`cat-${cat.id}`}
             style={{
               position: 'absolute',
-              left: screen.x - 28, top: screen.y - 55,
+              left: screen.x - 14, top: screen.y + 4,
               zIndex: Math.round(zOrder(cat.pos.gx, cat.pos.gy) * 10),
             }}
           >
-            <CatSprite appearance={cat} size={55} direction={cat.direction}
+            <CatSprite appearance={cat} size={28} direction={cat.direction}
               pose={cat.pose === 'walking' ? 'standing' : cat.pose}
             />
           </View>

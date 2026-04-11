@@ -6,6 +6,7 @@ export interface RoomData {
   user_id: string;
   map_id: string;
   furniture: PlacedFurniture[];
+  cat_names?: Record<string, string>;
   is_public: boolean;
   room_name?: string;
   updated_at: string;
@@ -20,21 +21,22 @@ class CatCityService {
   async saveRoom(
     mapId: string,
     furniture: PlacedFurniture[],
+    catNames?: Record<string, string>,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Utilisateur non connecté');
 
+      const payload: Record<string, unknown> = {
+        user_id: user.id,
+        map_id: mapId,
+        furniture: JSON.parse(JSON.stringify(furniture)),
+      };
+      if (catNames) payload.cat_names = catNames;
+
       const { error } = await supabase
         .from('cat_city_rooms')
-        .upsert(
-          {
-            user_id: user.id,
-            map_id: mapId,
-            furniture: JSON.parse(JSON.stringify(furniture)),
-          },
-          { onConflict: 'user_id,map_id' },
-        );
+        .upsert(payload, { onConflict: 'user_id,map_id' });
 
       if (error) throw new Error(error.message);
       return { success: true };

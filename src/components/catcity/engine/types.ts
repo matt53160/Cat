@@ -58,6 +58,13 @@ export interface MapDef {
   gridH: number;   // grid height (number of tiles along Y)
   wall: WallConfig;
   floor: FloorConfig;
+  /** Optional pixel-art background image replacing SVG walls+floor */
+  backgroundImage?: {
+    source: number; // require('…') asset id
+    width: number;  // image intrinsic width
+    height: number; // image intrinsic height
+    offsetY?: number; // vertical offset to align image with grid (negative = up)
+  };
   defaultFurniture: PlacedFurniture[];
 }
 

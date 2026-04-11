@@ -6,19 +6,18 @@ import {
   Dimensions,
   TouchableOpacity,
   ScrollView,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withRepeat,
   withSequence,
   withSpring,
-  withDelay,
   Easing,
   runOnJS,
-  cancelAnimation,
   FadeIn,
   FadeOut,
   SlideInDown,
@@ -128,35 +127,7 @@ const DEFAULT_CAT: Omit<CatState, 'pos' | 'pose' | 'direction'> = {
   id: 'default', name: 'Minou', furColor: '#FF9F33', eyeColor: '#50CC50', pattern: 'tabby',
 };
 
-const CAT_REACTIONS = ['Miaou !', 'Purrrr...', 'Mrrr~', '*ronronne*', 'Miaou ?', 'Prrrt !'];
-
-// ─── Floating hearts ─────────────────────────────────
-function FloatingHearts({ visible }: { visible: boolean }) {
-  if (!visible) return null;
-  const hearts = [
-    { emoji: '❤️', delay: 0, x: -10 },
-    { emoji: '💕', delay: 200, x: 12 },
-    { emoji: '🐾', delay: 400, x: -5 },
-  ];
-  return (
-    <>
-      {hearts.map((h, i) => (
-        <Animated.Text
-          key={i}
-          entering={FadeIn.delay(h.delay).duration(300)}
-          exiting={FadeOut.duration(400)}
-          style={[heartStyles.heart, { left: h.x }]}
-        >
-          {h.emoji}
-        </Animated.Text>
-      ))}
-    </>
-  );
-}
-
-const heartStyles = StyleSheet.create({
-  heart: { position: 'absolute', top: -30, fontSize: 16 },
-});
+const PIXEL_FONT = 'PressStart2P-Regular';
 
 // ─── Toast ───────────────────────────────────────────
 function Toast({ message, visible }: { message: string; visible: boolean }) {
@@ -185,52 +156,38 @@ const toastStyles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 2000,
   },
-  text: { color: '#FFF8EC', fontSize: 14, fontWeight: '600' },
+  text: { color: '#FFF8EC', fontSize: 10, fontFamily: PIXEL_FONT },
 });
 
 // ─── Draggable cat ───────────────────────────────────
 function DraggableCat({
-  cat, originX, originY, gridW, gridH, panOffset, onMoved, onTapped,
+  cat, originX, originY, gridW, gridH, mapScale, onMoved, onTapped,
 }: {
   cat: CatState;
   originX: number;
   originY: number;
   gridW: number;
   gridH: number;
-  panOffset: { x: { value: number }; y: { value: number } };
+  mapScale: { value: number };
   onMoved: (catId: string, gx: number, gy: number) => void;
   onTapped: (catId: string) => void;
 }) {
   const screen = gridToScreen(cat.pos.gx, cat.pos.gy, originX, originY);
-  const translateX = useSharedValue(screen.x - 28);
-  const translateY = useSharedValue(screen.y - 55);
+  const translateX = useSharedValue(screen.x - 14);
+  const translateY = useSharedValue(screen.y + 4);
   const offsetX = useSharedValue(0);
   const offsetY = useSharedValue(0);
   const scale = useSharedValue(1);
   const isDragging = useSharedValue(false);
-  const bobY = useSharedValue(0);
 
   useEffect(() => {
     const s = gridToScreen(cat.pos.gx, cat.pos.gy, originX, originY);
-    translateX.value = withTiming(s.x - 28, { duration: 800, easing: Easing.out(Easing.cubic) });
-    translateY.value = withTiming(s.y - 55, { duration: 800, easing: Easing.out(Easing.cubic) });
+    translateX.value = withTiming(s.x - 14, { duration: 800, easing: Easing.out(Easing.cubic) });
+    translateY.value = withTiming(s.y + 4, { duration: 800, easing: Easing.out(Easing.cubic) });
   }, [cat.pos.gx, cat.pos.gy, originX, originY]);
 
-  useEffect(() => {
-    const dur = cat.pose === 'sleeping' ? 1500 : cat.pose === 'sitting' ? 2000 : cat.pose === 'licking' ? 600 : 800;
-    const amp = cat.pose === 'sleeping' ? 2 : cat.pose === 'sitting' ? 1.5 : cat.pose === 'licking' ? 1 : 3;
-    bobY.value = withRepeat(
-      withSequence(
-        withTiming(-amp, { duration: dur, easing: Easing.inOut(Easing.sin) }),
-        withTiming(amp, { duration: dur, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1, true,
-    );
-    return () => cancelAnimation(bobY);
-  }, [cat.pose]);
-
   const handleDrop = useCallback((dx: number, dy: number) => {
-    const snapped = snapToGrid(dx + 28, dy + 55, originX, originY, gridW, gridH);
+    const snapped = snapToGrid(dx + 14, dy - 4, originX, originY, gridW, gridH);
     onMoved(cat.id, snapped.gx, snapped.gy);
   }, [cat.id, originX, originY, gridW, gridH, onMoved]);
 
@@ -248,12 +205,10 @@ function DraggableCat({
       offsetX.value = translateX.value;
       offsetY.value = translateY.value;
       scale.value = withTiming(1.15, { duration: 150 });
-      cancelAnimation(bobY);
-      bobY.value = withTiming(0, { duration: 100 });
     })
     .onUpdate(e => {
-      translateX.value = offsetX.value + e.translationX;
-      translateY.value = offsetY.value + e.translationY;
+      translateX.value = offsetX.value + e.translationX / mapScale.value;
+      translateY.value = offsetY.value + e.translationY / mapScale.value;
     })
     .onEnd(() => {
       isDragging.value = false;
@@ -265,8 +220,8 @@ function DraggableCat({
 
   const animatedStyle = useAnimatedStyle(() => ({
     position: 'absolute' as const,
-    left: translateX.value + panOffset.x.value,
-    top: translateY.value + panOffset.y.value + bobY.value,
+    left: translateX.value,
+    top: translateY.value,
     zIndex: isDragging.value ? 1000 : Math.round((cat.pos.gx + cat.pos.gy) * 10) + 5,
     transform: [{ scale: scale.value }],
   }));
@@ -277,13 +232,10 @@ function DraggableCat({
         <View style={catStyles.catContainer}>
           <CatSprite
             appearance={cat}
-            size={50}
+            size={25}
             direction={cat.direction}
             pose={cat.pose === 'walking' ? 'standing' : cat.pose === 'licking' ? 'licking' : cat.pose}
           />
-          <View style={catStyles.nameTag}>
-            <Text style={catStyles.nameText} numberOfLines={1}>{cat.name}</Text>
-          </View>
         </View>
       </Animated.View>
     </GestureDetector>
@@ -292,74 +244,57 @@ function DraggableCat({
 
 const catStyles = StyleSheet.create({
   catContainer: { alignItems: 'center' },
-  nameTag: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 10, marginTop: 2,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  nameText: { fontSize: 10, fontWeight: '700', color: colors.text, textAlign: 'center' },
 });
 
-// ─── Cat speech bubble ───────────────────────────────
-function CatBubble({ cat, originX, originY, panOffset }: {
+// ─── Cat name bubble ─────────────────────────────────
+function CatNameBubble({ cat, originX, originY, onRename }: {
   cat: CatState;
   originX: number;
   originY: number;
-  panOffset: { x: { value: number }; y: { value: number } };
+  onRename: (catId: string) => void;
 }) {
   const screen = gridToScreen(cat.pos.gx, cat.pos.gy, originX, originY);
-  const reaction = useRef(CAT_REACTIONS[Math.floor(Math.random() * CAT_REACTIONS.length)]).current;
 
   const animStyle = useAnimatedStyle(() => ({
     position: 'absolute' as const,
-    left: screen.x + panOffset.x.value - 45,
-    top: screen.y + panOffset.y.value - 105,
+    left: screen.x - 50,
+    top: screen.y - 18,
+    width: 100,
     zIndex: 1500,
+    alignItems: 'center' as const,
   }));
 
   return (
     <Animated.View style={animStyle} entering={FadeIn.springify()} exiting={FadeOut.duration(300)}>
-      <View style={bubbleStyles.bubble}>
-        <Text style={bubbleStyles.text}>{reaction}</Text>
-        <FloatingHearts visible />
-      </View>
-      <View style={bubbleStyles.arrow} />
+      <TouchableOpacity onPress={() => onRename(cat.id)} activeOpacity={0.7}>
+        <View style={bubbleStyles.bubble}>
+          <Text style={bubbleStyles.text}>{cat.name}</Text>
+        </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
 
 const bubbleStyles = StyleSheet.create({
   bubble: {
-    backgroundColor: 'white',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
     borderColor: colors.goldLight,
     alignItems: 'center',
-    minWidth: 90,
   },
-  text: { fontSize: 14, fontWeight: '700', color: colors.text },
-  arrow: {
-    width: 0, height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: 'white',
-    alignSelf: 'center',
-  },
+  text: { fontSize: 7, fontFamily: PIXEL_FONT, color: colors.text },
 });
 
 // ─── Draggable furniture (when selected) ─────────────
 function DraggableFurniture({
-  placed, originX, originY, gridW, gridH, panOffset, furniture, onMoved, onDeselect, onInvalidPlacement,
+  placed, originX, originY, gridW, gridH, mapScale, furniture, onMoved, onDeselect, onInvalidPlacement,
 }: {
   placed: PlacedFurniture;
   originX: number; originY: number; gridW: number; gridH: number;
-  panOffset: { x: { value: number }; y: { value: number } };
+  mapScale: { value: number };
   furniture: PlacedFurniture[];
   onMoved: (id: string, gx: number, gy: number) => void;
   onDeselect: () => void;
@@ -426,8 +361,8 @@ function DraggableFurniture({
       scale.value = withTiming(1.08, { duration: 100 });
     })
     .onUpdate(e => {
-      translateX.value = offsetX.value + e.translationX;
-      translateY.value = offsetY.value + e.translationY;
+      translateX.value = offsetX.value + e.translationX / mapScale.value;
+      translateY.value = offsetY.value + e.translationY / mapScale.value;
     })
     .onEnd(() => {
       scale.value = withTiming(1, { duration: 150 });
@@ -438,8 +373,8 @@ function DraggableFurniture({
 
   const animStyle = useAnimatedStyle(() => ({
     position: 'absolute' as const,
-    left: translateX.value + panOffset.x.value + shakeX.value,
-    top: translateY.value + panOffset.y.value,
+    left: translateX.value + shakeX.value,
+    top: translateY.value,
     zIndex: 900,
     transform: [{ scale: scale.value }],
   }));
@@ -551,14 +486,14 @@ const catalogStyles = StyleSheet.create({
     marginBottom: 8,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { fontSize: 17, fontWeight: '800', color: colors.text },
+  title: { fontSize: 11, fontFamily: PIXEL_FONT, color: colors.text },
   removeBtn: {
     backgroundColor: colors.pinkLight,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 12,
   },
-  removeBtnText: { fontSize: 13, fontWeight: '700', color: colors.red },
+  removeBtnText: { fontSize: 8, fontFamily: PIXEL_FONT, color: colors.red },
   closeBtn: {
     width: 30, height: 30,
     borderRadius: 15,
@@ -566,7 +501,7 @@ const catalogStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeBtnText: { fontSize: 16, fontWeight: '700', color: colors.textSecondary },
+  closeBtnText: { fontSize: 10, fontFamily: PIXEL_FONT, color: colors.textSecondary },
   scroll: { paddingHorizontal: 16, gap: 12 },
   item: {
     alignItems: 'center',
@@ -578,7 +513,7 @@ const catalogStyles = StyleSheet.create({
     borderColor: colors.border,
   },
   itemIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  itemName: { fontSize: 11, fontWeight: '600', color: colors.text, marginTop: 4 },
+  itemName: { fontSize: 7, fontFamily: PIXEL_FONT, color: colors.text, marginTop: 4 },
   addBadge: {
     position: 'absolute',
     top: 4,
@@ -590,7 +525,7 @@ const catalogStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addBadgeText: { fontSize: 13, fontWeight: '800', color: 'white', marginTop: -1 },
+  addBadgeText: { fontSize: 10, fontFamily: PIXEL_FONT, color: 'white', marginTop: -1 },
 });
 
 // ─── Main screen ─────────────────────────────────────
@@ -604,6 +539,8 @@ export default function CatCityScreen() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [tappedCatId, setTappedCatId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | null>(null);
+  const [renamingCatId, setRenamingCatId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState('');
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -629,19 +566,22 @@ export default function CatCityScreen() {
   }, []);
 
   // ─── Debounced save to Supabase ────────────────
-  const debouncedSave = useCallback((newFurniture: PlacedFurniture[]) => {
+  const debouncedSave = useCallback((newFurniture: PlacedFurniture[], catNames?: Record<string, string>) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     setSaveStatus('saving');
     saveTimer.current = setTimeout(async () => {
-      const result = await catCityService.saveRoom(map.id, newFurniture);
+      const result = await catCityService.saveRoom(map.id, newFurniture, catNames);
       setSaveStatus(result.success ? 'saved' : 'error');
       if (result.success) {
         setTimeout(() => setSaveStatus(null), 2000);
       }
-    }, 1500); // Attend 1.5s d'inactivité avant de sauvegarder
+    }, 1500);
   }, [map.id]);
 
   // ─── Gestures ──────────────────────────────────
+  const mapScale = useSharedValue(1);
+  const mapScaleOffset = useSharedValue(1);
+
   const mapPanGesture = Gesture.Pan()
     .onStart(() => {
       panOffsetX.value = panX.value;
@@ -652,28 +592,50 @@ export default function CatCityScreen() {
       panY.value = panOffsetY.value + e.translationY;
     });
 
+  const mapPinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      mapScaleOffset.value = mapScale.value;
+    })
+    .onUpdate(e => {
+      mapScale.value = Math.min(3, Math.max(0.5, mapScaleOffset.value * e.scale));
+    });
+
   const mapTapGesture = Gesture.Tap().onEnd(() => {
     runOnJS(setSelectedFurnitureId)(null);
   });
 
-  const mapGesture = Gesture.Race(mapPanGesture, mapTapGesture);
+  const mapGesture = Gesture.Race(
+    Gesture.Simultaneous(mapPanGesture, mapPinchGesture),
+    mapTapGesture,
+  );
 
   const mapAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: panX.value },
       { translateY: panY.value },
+      { scale: mapScale.value },
     ],
   }));
 
   // ─── Load data ─────────────────────────────────
-  const loadCats = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const photos = await photoMetadataService.getAllPhotosWithMetadata();
+      const [photos, room] = await Promise.all([
+        photoMetadataService.getAllPhotosWithMetadata(),
+        catCityService.loadRoom(map.id),
+      ]);
+
+      if (room?.furniture && room.furniture.length > 0) {
+        setFurniture(room.furniture);
+      }
+
       let appearances = photosToAppearances(photos);
       if (appearances.length === 0) appearances = [DEFAULT_CAT];
 
+      const savedNames = room?.cat_names || {};
       const newCats: CatState[] = appearances.map((a, i) => ({
         ...a,
+        name: savedNames[a.id] || a.name,
         pos: { gx: 2 + (i % 3), gy: 2 + Math.floor(i / 3) },
         pose: 'standing' as const,
         direction: Math.random() > 0.5 ? 'left' as const : 'right' as const,
@@ -682,19 +644,11 @@ export default function CatCityScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  const loadRoom = useCallback(async () => {
-    const room = await catCityService.loadRoom(map.id);
-    if (room && room.furniture && room.furniture.length > 0) {
-      setFurniture(room.furniture);
-    }
   }, [map.id]);
 
   useEffect(() => {
-    loadRoom();
-    loadCats();
-  }, [loadRoom, loadCats]);
+    loadData();
+  }, [loadData]);
 
   // ─── Licking animation – standing cats lick their paw periodically ───
   useEffect(() => {
@@ -762,10 +716,30 @@ export default function CatCityScreen() {
 
   const handleCatTapped = useCallback((catId: string) => {
     if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
-    setTappedCatId(catId);
-    // vibration removed — needs VIBRATE permission
-    bubbleTimer.current = setTimeout(() => setTappedCatId(null), 2500);
+    setTappedCatId(prev => prev === catId ? null : catId);
   }, []);
+
+  const handleStartRename = useCallback((catId: string) => {
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
+    setRenameText(cat.name);
+    setRenamingCatId(catId);
+  }, [cats]);
+
+  const handleConfirmRename = useCallback(() => {
+    if (!renamingCatId || !renameText.trim()) return;
+    setCats(prev => {
+      const updated = prev.map(c =>
+        c.id === renamingCatId ? { ...c, name: renameText.trim() } : c,
+      );
+      const catNames: Record<string, string> = {};
+      updated.forEach(c => { catNames[c.id] = c.name; });
+      debouncedSave(furniture, catNames);
+      return updated;
+    });
+    setRenamingCatId(null);
+    setTappedCatId(null);
+  }, [renamingCatId, renameText, furniture, debouncedSave]);
 
   const handleAddFurniture = useCallback((defId: string) => {
     const def = getFurnitureDef(defId);
@@ -849,50 +823,50 @@ export default function CatCityScreen() {
                 selectedFurnitureId={selectedFurnitureId}
                 onFurnitureTap={handleFurnitureTap}
               />
+
+              {/* Selected furniture (draggable overlay) */}
+              {selectedFurnitureId && furniture.find(f => f.id === selectedFurnitureId) && (
+                <DraggableFurniture
+                  placed={furniture.find(f => f.id === selectedFurnitureId)!}
+                  originX={originX}
+                  originY={originY}
+                  gridW={map.gridW}
+                  gridH={map.gridH}
+                  mapScale={mapScale}
+                  furniture={furniture}
+                  onMoved={handleFurnitureMoved}
+                  onDeselect={() => setSelectedFurnitureId(null)}
+                  onInvalidPlacement={handleInvalidPlacement}
+                />
+              )}
+
+              {/* Draggable cats */}
+              {cats.map(cat => (
+                <DraggableCat
+                  key={cat.id}
+                  cat={cat}
+                  originX={originX}
+                  originY={originY}
+                  gridW={map.gridW}
+                  gridH={map.gridH}
+                  mapScale={mapScale}
+                  onMoved={handleCatMoved}
+                  onTapped={handleCatTapped}
+                />
+              ))}
+
+              {/* Cat name bubble */}
+              {tappedCat && (
+                <CatNameBubble
+                  key={`bubble-${tappedCatId}`}
+                  cat={tappedCat}
+                  originX={originX}
+                  originY={originY}
+                  onRename={handleStartRename}
+                />
+              )}
             </Animated.View>
           </GestureDetector>
-
-          {/* Selected furniture (draggable overlay) */}
-          {selectedFurnitureId && furniture.find(f => f.id === selectedFurnitureId) && (
-            <DraggableFurniture
-              placed={furniture.find(f => f.id === selectedFurnitureId)!}
-              originX={originX}
-              originY={originY}
-              gridW={map.gridW}
-              gridH={map.gridH}
-              panOffset={{ x: panX, y: panY }}
-              furniture={furniture}
-              onMoved={handleFurnitureMoved}
-              onDeselect={() => setSelectedFurnitureId(null)}
-              onInvalidPlacement={handleInvalidPlacement}
-            />
-          )}
-
-          {/* Draggable cats */}
-          {cats.map(cat => (
-            <DraggableCat
-              key={cat.id}
-              cat={cat}
-              originX={originX}
-              originY={originY}
-              gridW={map.gridW}
-              gridH={map.gridH}
-              panOffset={{ x: panX, y: panY }}
-              onMoved={handleCatMoved}
-              onTapped={handleCatTapped}
-            />
-          ))}
-
-          {/* Cat speech bubble */}
-          {tappedCat && (
-            <CatBubble
-              key={`bubble-${tappedCatId}-${Date.now()}`}
-              cat={tappedCat}
-              originX={originX}
-              originY={originY}
-              panOffset={{ x: panX, y: panY }}
-            />
-          )}
 
           {/* Bottom toolbar */}
           {!showCatalog && (
@@ -924,6 +898,38 @@ export default function CatCityScreen() {
             selectedFurnitureId={selectedFurnitureId}
           />
 
+          {/* Rename modal */}
+          <Modal visible={!!renamingCatId} transparent animationType="fade">
+            <View style={renameStyles.overlay}>
+              <View style={renameStyles.card}>
+                <Text style={renameStyles.title}>Renommer</Text>
+                <TextInput
+                  style={renameStyles.input}
+                  value={renameText}
+                  onChangeText={setRenameText}
+                  maxLength={20}
+                  autoFocus
+                  selectTextOnFocus
+                  onSubmitEditing={handleConfirmRename}
+                />
+                <View style={renameStyles.buttons}>
+                  <TouchableOpacity
+                    style={renameStyles.cancelBtn}
+                    onPress={() => setRenamingCatId(null)}
+                  >
+                    <Text style={renameStyles.cancelText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={renameStyles.confirmBtn}
+                    onPress={handleConfirmRename}
+                  >
+                    <Text style={renameStyles.confirmText}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
           {cats.length <= 1 && cats[0]?.id === 'default' && !showCatalog && (
             <View style={styles.hintCard}>
               <Text style={styles.hintTitle}>Votre salon est vide !</Text>
@@ -945,8 +951,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   headerLeft: {},
-  title: { fontSize: 24, fontWeight: '800', color: colors.text },
-  subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  title: { fontSize: 16, fontFamily: PIXEL_FONT, color: colors.text },
+  subtitle: { fontSize: 8, fontFamily: PIXEL_FONT, color: colors.textSecondary, marginTop: 4 },
   saveBadge: {
     backgroundColor: colors.greenLight,
     paddingHorizontal: 10,
@@ -954,7 +960,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   saveBadgeError: { backgroundColor: colors.pinkLight },
-  saveBadgeText: { fontSize: 11, fontWeight: '600', color: colors.text },
+  saveBadgeText: { fontSize: 7, fontFamily: PIXEL_FONT, color: colors.text },
   gameContainer: { flex: 1 },
   mapWrapper: {
     width: SCREEN_WIDTH * 2,
@@ -962,7 +968,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingEmoji: { fontSize: 48, marginBottom: 12 },
-  loadingText: { fontSize: 16, color: colors.textSecondary, fontWeight: '600' },
+  loadingText: { fontSize: 10, fontFamily: PIXEL_FONT, color: colors.textSecondary },
   toolbar: {
     position: 'absolute',
     bottom: 80,
@@ -987,8 +993,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  catalogBtnIcon: { fontSize: 18, fontWeight: '800', color: 'white' },
-  catalogBtnText: { fontSize: 13, fontWeight: '700', color: 'white' },
+  catalogBtnIcon: { fontSize: 14, fontFamily: PIXEL_FONT, color: 'white' },
+  catalogBtnText: { fontSize: 9, fontFamily: PIXEL_FONT, color: 'white' },
   infoItem: {
     backgroundColor: 'rgba(255,255,255,0.9)',
     paddingHorizontal: 14,
@@ -997,7 +1003,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  infoText: { fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
+  infoText: { fontSize: 7, fontFamily: PIXEL_FONT, color: colors.textSecondary },
   hintCard: {
     position: 'absolute',
     bottom: 130,
@@ -1010,6 +1016,55 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldLight,
   },
-  hintTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 6 },
-  hintText: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18 },
+  hintTitle: { fontSize: 10, fontFamily: PIXEL_FONT, color: colors.text, marginBottom: 6 },
+  hintText: { fontSize: 7, fontFamily: PIXEL_FONT, color: colors.textSecondary, textAlign: 'center', lineHeight: 16 },
+});
+
+const renameStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: 280,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.goldLight,
+  },
+  title: { fontSize: 11, fontFamily: PIXEL_FONT, color: colors.text, marginBottom: 16 },
+  input: {
+    width: '100%',
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 12,
+    fontFamily: PIXEL_FONT,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  buttons: { flexDirection: 'row', gap: 12 },
+  cancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: colors.bgCardAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelText: { fontSize: 8, fontFamily: PIXEL_FONT, color: colors.textSecondary },
+  confirmBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: colors.gold,
+  },
+  confirmText: { fontSize: 8, fontFamily: PIXEL_FONT, color: 'white' },
 });

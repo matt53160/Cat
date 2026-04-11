@@ -1,8 +1,8 @@
 import { GridPos, ScreenPos } from './types';
 
 // Standard isometric tile dimensions
-export const TILE_W = 64;
-export const TILE_H = 32;
+export const TILE_W = 32;
+export const TILE_H = 16;
 
 /**
  * Convert grid coordinates to screen (pixel) coordinates.
